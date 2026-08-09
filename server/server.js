@@ -41,8 +41,8 @@ app.disable("x-powered-by");
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  "https://clinic-appointment-frontend-zei9.onrender.com",
+];
 
 app.use(
   cors({
