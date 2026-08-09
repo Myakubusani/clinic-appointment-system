@@ -11,6 +11,10 @@ function Login() {
     password: "",
   });
 
+  // =====================================================
+  // HANDLE INPUT
+  // =====================================================
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -18,68 +22,132 @@ function Login() {
     });
   };
 
+  // =====================================================
+  // LOGIN
+  // =====================================================
+
   const login = async (e) => {
     e.preventDefault();
 
     try {
       const res = await API.post("/auth/login", formData);
 
-      console.log("Login Response:", res.data);
+      console.log("================================");
+      console.log("LOGIN RESPONSE:", res.data);
+      console.log("LOGIN ROLE:", res.data.role);
+      console.log("================================");
 
-      // Save logged-in user
+      // =================================================
+      // SAVE USER
+      // =================================================
+
       localStorage.setItem(
         "user",
         JSON.stringify(res.data.user)
       );
 
-      // Save token
-      localStorage.setItem("token", res.data.token);
+      // =================================================
+      // SAVE TOKEN
+      // =================================================
 
-      // Save role
-      localStorage.setItem("role", res.data.role);
+      localStorage.setItem(
+        "token",
+        res.data.token
+      );
 
-      // If the logged-in user is a patient,
-      // also save the patient information separately.
+      // =================================================
+      // SAVE ROLE
+      // =================================================
+
+      localStorage.setItem(
+        "role",
+        res.data.role
+      );
+
+      // =================================================
+      // PATIENT DATA
+      // =================================================
+
       if (res.data.role === "patient") {
         localStorage.setItem(
           "patient",
           JSON.stringify(res.data.user)
         );
       } else {
-        // Remove old patient data when another role logs in
+        // Remove old patient data if another role logs in
         localStorage.removeItem("patient");
       }
 
-      toast.success("Login successful!");
+      // =================================================
+      // REDIRECT ACCORDING TO ROLE
+      // =================================================
 
-      // Redirect according to role
       switch (res.data.role) {
+        // -----------------------------------------------
+        // ADMIN
+        // -----------------------------------------------
+
         case "admin":
+          toast.success("Login successful!");
           navigate("/admin");
           break;
 
+        // -----------------------------------------------
+        // DOCTOR
+        // -----------------------------------------------
+
         case "doctor":
-          navigate("/doctor-dashboard");
+          toast.info(
+            "Please use the Doctor Login page to access your doctor account."
+          );
+
+          navigate("/doctor-login");
           break;
 
+        // -----------------------------------------------
+        // PATIENT
+        // -----------------------------------------------
+
         case "patient":
+          toast.success("Login successful!");
           navigate("/dashboard");
           break;
 
+        // -----------------------------------------------
+        // UNKNOWN ROLE
+        // -----------------------------------------------
+
         default:
+          toast.error(
+            "Unable to determine your account type."
+          );
+
           navigate("/login");
           break;
       }
-
-    } catch (err) {
-      console.log("Login Error:", err);
+    } catch (error) {
+      console.error("================================");
+      console.error("LOGIN ERROR:", error);
+      console.error(
+        "STATUS:",
+        error.response?.status
+      );
+      console.error(
+        "SERVER RESPONSE:",
+        error.response?.data
+      );
+      console.error("================================");
 
       toast.error(
-        err.response?.data?.message ||
-        "Invalid email or password"
+        error?.response?.data?.message ||
+          "Login failed. Please try again."
       );
     }
   };
+
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
     <div
@@ -97,23 +165,28 @@ function Login() {
           borderRadius: "15px",
         }}
       >
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <div className="text-center mb-4">
-
           <h1>🏥</h1>
 
-          <h3>ClinicCare Login</h3>
+          <h3>Patient Login</h3>
 
           <p className="text-muted">
-            Login as Patient, Doctor or Administrator
+            Login to your ClinicCare patient account
           </p>
-
         </div>
 
+        {/* =================================================
+            FORM
+        ================================================= */}
+
         <form onSubmit={login}>
+          {/* EMAIL */}
 
           <div className="mb-3">
-
             <input
               className="form-control"
               type="email"
@@ -123,11 +196,11 @@ function Login() {
               onChange={handleChange}
               required
             />
-
           </div>
 
-          <div className="mb-3">
+          {/* PASSWORD */}
 
+          <div className="mb-3">
             <input
               className="form-control"
               type="password"
@@ -137,8 +210,9 @@ function Login() {
               onChange={handleChange}
               required
             />
-
           </div>
+
+          {/* LOGIN */}
 
           <button
             className="btn btn-primary w-100"
@@ -146,21 +220,32 @@ function Login() {
           >
             Login
           </button>
-
         </form>
 
-        <p className="text-center mt-3">
+        {/* =================================================
+            REGISTER
+        ================================================= */}
 
+        <p className="text-center mt-3">
           Don't have a patient account?{" "}
 
           <Link to="/register">
             Register
           </Link>
-
         </p>
 
-      </div>
+        {/* =================================================
+            DOCTOR LOGIN
+        ================================================= */}
 
+        <p className="text-center mb-0">
+          Are you a doctor?{" "}
+
+          <Link to="/doctor-login">
+            Doctor Login
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
