@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment files
+.env
+server/.env
+client/.env
+
+# Build folders
+dist/
+build/
+
+# Logs
+*.log
+
+# Vite
+.vite/
+
+# OS files
+.DS_Store
+Thumbs.db
+node_modules/
+.env
+*.db
+*.sqlite
+*.sqlite3
+dist/
+build/
+.vite/
