@@ -110,12 +110,6 @@ app.use("/api/medical-records", medicalRecordRoutes);
 
 app.use("/api/auth", authRoutes);
 
-app.get("/api/auth/test", (req, res) => {
-  res.json({
-    message: "AUTH ROUTE IS WORKING",
-    status: "success"
-  });
-});
 
 app.use("/api/notifications", notificationRoutes);
 
