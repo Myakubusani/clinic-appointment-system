@@ -14,7 +14,10 @@ function Dashboard() {
   // LOAD PATIENT
   // ==========================================
   useEffect(() => {
-    const storedPatient = localStorage.getItem("patient");
+  const loadPatient = async () => {
+
+    const storedPatient =
+      localStorage.getItem("patient");
 
     if (!storedPatient) {
       setLoadingAppointment(false);
@@ -22,13 +25,47 @@ function Dashboard() {
     }
 
     try {
-      const parsedPatient = JSON.parse(storedPatient);
+
+      const parsedPatient =
+        JSON.parse(storedPatient);
+
+      // First show stored information
       setPatient(parsedPatient);
+
+      // Get latest information from database
+      if (parsedPatient.id) {
+
+        const response = await API.get(
+          `/patients/${parsedPatient.id}`
+        );
+
+        console.log(
+          "✅ Latest patient information:",
+          response.data
+        );
+
+        setPatient(response.data);
+
+        // Update localStorage too
+        localStorage.setItem(
+          "patient",
+          JSON.stringify(response.data)
+        );
+      }
+
     } catch (error) {
-      console.error("Patient data error:", error);
-      setLoadingAppointment(false);
+
+      console.error(
+        "❌ Patient data error:",
+        error
+      );
+
     }
-  }, []);
+  };
+
+  loadPatient();
+
+}, []);
 
   // ==========================================
   // LOAD PATIENT APPOINTMENTS
@@ -41,41 +78,34 @@ function Dashboard() {
 
   const loadAppointments = async () => {
   try {
-    setLoading(true);
+    setLoadingAppointment(true);
 
-    const token = localStorage.getItem("token");
+    const patientName = encodeURIComponent(patient.fullName);
 
-    const url = `/doctors/appointments/${encodeURIComponent(
-      doctor.fullName
-    )}`;
+    const url = `/appointments/patient/${patientName}`;
 
     console.log("================================");
-    console.log("DOCTOR:", doctor);
-    console.log("TOKEN:", token);
+    console.log("PATIENT:", patient);
     console.log("REQUEST URL:", url);
-    console.log("FULL URL:", `http://localhost:5000/api${url}`);
     console.log("================================");
 
-    const res = await API.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await API.get(url);
 
     console.log("APPOINTMENT RESPONSE:", res.data);
 
-    setAppointments(res.data);
+    setAppointments(res.data || []);
   } catch (err) {
-    console.log("================================");
-    console.log("APPOINTMENT ERROR");
-    console.log("STATUS:", err.response?.status);
-    console.log("DATA:", err.response?.data);
-    console.log("URL:", err.config?.url);
-    console.log("================================");
+    console.error("================================");
+    console.error("APPOINTMENT ERROR");
+    console.error("STATUS:", err.response?.status);
+    console.error("DATA:", err.response?.data);
+    console.error("URL:", err.config?.url);
+    console.error("================================");
 
     toast.error("Failed to load appointments");
+    setAppointments([]);
   } finally {
-    setLoading(false);
+    setLoadingAppointment(false);
   }
 };
 

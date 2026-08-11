@@ -17,7 +17,10 @@ function ManagePatients() {
       setPatients(res.data);
     } catch (err) {
       console.log(err);
-      alert("Failed to load patients");
+      toast.error(
+      err.response?.data?.message ||
+      "Failed to load patients"
+      );
     }
   };
 
@@ -27,7 +30,8 @@ function ManagePatients() {
     try {
       await API.delete(`/patients/${id}`);
 
-toast.success("Patient deleted successfully!");      fetchPatients();
+    toast.success("Patient deleted successfully!");      
+    fetchPatients();
     } catch (err) {
       console.log(err);
       toast.error("Failed to delete patient");
