@@ -1,20 +1,51 @@
 const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcryptjs");
+const path = require("path");
 
-const db = new sqlite3.Database("./database/clinic.db", (err) => {
-  if (err) {
-    console.error("❌ Database connection error:", err.message);
-    return;
+// =====================================================
+// DATABASE PATH
+// =====================================================
+
+const dbPath = path.join(__dirname, "clinic.db");
+
+// =====================================================
+// CREATE DATABASE
+// =====================================================
+
+const db = new sqlite3.Database(
+  dbPath,
+  (err) => {
+    if (err) {
+      console.error(
+        "❌ Database connection error:",
+        err.message
+      );
+    } else {
+      console.log(
+        "✅ Connected to SQLite database."
+      );
+    }
   }
+);
 
-  console.log("✅ Connected to SQLite database.");
+// =====================================================
+// DATABASE INITIALIZATION
+// =====================================================
+//
+// server.js waits for this before starting:
+// db.ready.then(...)
+//
+
+db.ready = new Promise((resolve, reject) => {
 
   db.serialize(() => {
 
-    // =====================================================
+    // =================================================
     // PATIENTS TABLE
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS patients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fullName TEXT NOT NULL,
@@ -23,13 +54,31 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         password TEXT NOT NULL,
         role TEXT DEFAULT 'patient'
       )
-    `);
+      `,
+      (err) => {
+        if (err) {
+          console.error(
+            "❌ Patients table error:",
+            err.message
+          );
+
+          reject(err);
+          return;
+        }
+
+        console.log(
+          "✅ Patients table ready."
+        );
+      }
+    );
 
 
-    // =====================================================
+    // =================================================
     // DOCTORS TABLE
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS doctors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fullName TEXT NOT NULL,
@@ -39,13 +88,31 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         password TEXT NOT NULL,
         role TEXT DEFAULT 'doctor'
       )
-    `);
+      `,
+      (err) => {
+        if (err) {
+          console.error(
+            "❌ Doctors table error:",
+            err.message
+          );
+
+          reject(err);
+          return;
+        }
+
+        console.log(
+          "✅ Doctors table ready."
+        );
+      }
+    );
 
 
-    // =====================================================
+    // =================================================
     // USERS TABLE - ADMINS
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hospitalId TEXT UNIQUE NOT NULL,
@@ -54,13 +121,31 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         password TEXT NOT NULL,
         role TEXT NOT NULL
       )
-    `);
+      `,
+      (err) => {
+        if (err) {
+          console.error(
+            "❌ Users table error:",
+            err.message
+          );
+
+          reject(err);
+          return;
+        }
+
+        console.log(
+          "✅ Users table ready."
+        );
+      }
+    );
 
 
-    // =====================================================
+    // =================================================
     // APPOINTMENTS TABLE
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS appointments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         patientName TEXT NOT NULL,
@@ -71,64 +156,88 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         status TEXT DEFAULT 'Pending',
         reminderSent INTEGER DEFAULT 0
       )
-    `);
-
-
-    // =====================================================
-    // ADD REMINDER COLUMN TO EXISTING DATABASE
-    // =====================================================
-    //
-    // This is important because your appointments table
-    // already exists in SQLite.
-    //
-    // CREATE TABLE IF NOT EXISTS does NOT modify an
-    // existing table, so we safely add the column here.
-    //
-    db.run(
-      `
-        ALTER TABLE appointments
-        ADD COLUMN reminderSent INTEGER DEFAULT 0
       `,
       (err) => {
-
         if (err) {
-
-          // This means the column already exists.
-          if (
-            err.message.includes(
-              "duplicate column name"
-            )
-          ) {
-
-            console.log(
-              "✅ reminderSent column already exists."
-            );
-
-          } else {
-
-            console.log(
-              "⚠️ Reminder column check:",
-              err.message
-            );
-
-          }
-
-        } else {
-
-          console.log(
-            "✅ reminderSent column added successfully."
+          console.error(
+            "❌ Appointments table error:",
+            err.message
           );
 
+          reject(err);
+          return;
         }
+
+        console.log(
+          "✅ Appointments table ready."
+        );
+      }
+    );
+
+    // =================================================
+// ENSURE reminderSent COLUMN EXISTS
+// =================================================
+
+db.all(
+  `PRAGMA table_info(appointments)`,
+  [],
+  (err, columns) => {
+
+    if (err) {
+      console.error(
+        "❌ Could not check appointments columns:",
+        err.message
+      );
+      return;
+    }
+
+    const hasReminderSent = columns.some(
+      (column) => column.name === "reminderSent"
+    );
+
+    if (hasReminderSent) {
+
+      console.log(
+        "✅ reminderSent column already exists."
+      );
+
+      return;
+    }
+
+    db.run(
+      `
+      ALTER TABLE appointments
+      ADD COLUMN reminderSent INTEGER DEFAULT 0
+      `,
+      (alterErr) => {
+
+        if (alterErr) {
+
+          console.error(
+            "❌ Failed to add reminderSent column:",
+            alterErr.message
+          );
+
+          return;
+        }
+
+        console.log(
+          "✅ reminderSent column added successfully."
+        );
 
       }
     );
 
+  }
+);
 
-    // =====================================================
+
+    // =================================================
     // MEDICAL RECORDS TABLE
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS medical_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         patientName TEXT NOT NULL,
@@ -138,13 +247,31 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         notes TEXT,
         visitDate TEXT NOT NULL
       )
-    `);
+      `,
+      (err) => {
+        if (err) {
+          console.error(
+            "❌ Medical records table error:",
+            err.message
+          );
+
+          reject(err);
+          return;
+        }
+
+        console.log(
+          "✅ Medical records table ready."
+        );
+      }
+    );
 
 
-    // =====================================================
+    // =================================================
     // NOTIFICATIONS TABLE
-    // =====================================================
-    db.run(`
+    // =================================================
+
+    db.run(
+      `
       CREATE TABLE IF NOT EXISTS notifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER NOT NULL,
@@ -155,106 +282,164 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
         isRead INTEGER DEFAULT 0,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+      `,
+      (err) => {
+        if (err) {
+          console.error(
+            "❌ Notifications table error:",
+            err.message
+          );
+
+          reject(err);
+          return;
+        }
+
+        console.log(
+          "✅ Notifications table ready."
+        );
+      }
+    );
 
 
-    // =====================================================
+    // =================================================
     // CREATE DEFAULT ADMIN
-    // =====================================================
+    // =================================================
+
     db.get(
-      "SELECT * FROM users WHERE role = 'admin'",
+      "SELECT * FROM users WHERE role = 'admin' LIMIT 1",
       [],
       (err, row) => {
 
         if (err) {
-
-          console.log(
+          console.error(
             "❌ Admin lookup error:",
-            err
+            err.message
           );
 
+          reject(err);
           return;
         }
 
 
-        // ================================================
-        // CREATE ADMIN IF NONE EXISTS
-        // ================================================
-        if (!row) {
+        // =============================================
+        // ADMIN ALREADY EXISTS
+        // =============================================
 
-          bcrypt.hash(
-            "admin123",
-            10,
-            (err, hashedPassword) => {
-
-              if (err) {
-
-                console.log(
-                  "❌ Password hashing error:",
-                  err
-                );
-
-                return;
-              }
-
-
-              db.run(
-                `
-                  INSERT INTO users
-                  (
-                    hospitalId,
-                    fullName,
-                    email,
-                    password,
-                    role
-                  )
-                  VALUES (?, ?, ?, ?, ?)
-                `,
-                [
-                  "ADMIN001",
-                  "System Administrator",
-                  "admin@cliniccare.com",
-                  hashedPassword,
-                  "admin",
-                ],
-                (err) => {
-
-                  if (err) {
-
-                    console.log(
-                      "❌ Failed to create default admin:",
-                      err
-                    );
-
-                  } else {
-
-                    console.log(
-                      "✅ Default admin account created."
-                    );
-
-                  }
-
-                }
-              );
-
-            }
-          );
-
-        } else {
+        if (row) {
 
           console.log(
             "✅ Admin account already exists."
           );
 
+          finishInitialization();
+
+          return;
         }
+
+
+        // =============================================
+        // CREATE DEFAULT ADMIN
+        // =============================================
+
+        bcrypt.hash(
+          "admin123",
+          10,
+          (hashErr, hashedPassword) => {
+
+            if (hashErr) {
+
+              console.error(
+                "❌ Password hashing error:",
+                hashErr.message
+              );
+
+              reject(hashErr);
+              return;
+            }
+
+
+            db.run(
+              `
+              INSERT INTO users
+              (
+                hospitalId,
+                fullName,
+                email,
+                password,
+                role
+              )
+              VALUES (?, ?, ?, ?, ?)
+              `,
+              [
+                "ADMIN001",
+                "System Administrator",
+                "admin@cliniccare.com",
+                hashedPassword,
+                "admin",
+              ],
+              (insertErr) => {
+
+                if (insertErr) {
+
+                  console.error(
+                    "❌ Failed to create default admin:",
+                    insertErr.message
+                  );
+
+                  reject(insertErr);
+                  return;
+                }
+
+                console.log(
+                  "✅ Default admin account created."
+                );
+
+                finishInitialization();
+
+              }
+            );
+
+          }
+        );
 
       }
     );
 
 
-    console.log(
-      "✅ Database tables created successfully."
-    );
+    // =================================================
+    // FINISH DATABASE INITIALIZATION
+    // =================================================
+
+    let initializationFinished = false;
+
+    function finishInitialization() {
+
+      if (initializationFinished) {
+        return;
+      }
+
+      initializationFinished = true;
+
+      console.log("");
+      console.log(
+        "========================================"
+      );
+
+      console.log(
+        "✅ Database tables created successfully."
+      );
+
+      console.log(
+        "✅ Database initialization completed."
+      );
+
+      console.log(
+        "========================================"
+      );
+
+      resolve();
+
+    }
 
   });
 
@@ -264,4 +449,5 @@ const db = new sqlite3.Database("./database/clinic.db", (err) => {
 // =====================================================
 // EXPORT DATABASE
 // =====================================================
+
 module.exports = db;

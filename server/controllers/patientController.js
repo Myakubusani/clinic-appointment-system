@@ -1,6 +1,7 @@
 const {
   createPatient,
   findPatient,
+  getPatientById,
   getAllPatients,
   deletePatientById,
 } = require("../models/patientModel");
@@ -21,7 +22,6 @@ const registerPatient = (req, res) => {
     password,
   } = req.body;
 
-  // Basic validation
   if (
     !fullName ||
     !email ||
@@ -34,7 +34,6 @@ const registerPatient = (req, res) => {
     });
   }
 
-  // Password minimum length
   if (password.length < 6) {
     return res.status(400).json({
       message:
@@ -58,11 +57,8 @@ const registerPatient = (req, res) => {
           err.message
         );
 
-        // Duplicate email
         if (
-          err.message.includes(
-            "already exists"
-          )
+          err.message.includes("already exists")
         ) {
           return res.status(409).json({
             message: err.message,
@@ -128,7 +124,6 @@ const loginPatient = (req, res) => {
         });
       }
 
-      // Generate JWT
       const token = generateToken(patient);
 
       return res.json({
@@ -147,8 +142,52 @@ const loginPatient = (req, res) => {
 
 
 // =====================================================
+// GET PATIENT BY ID
+// =====================================================
+
+const getPatient = (req, res) => {
+
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({
+      message:
+        "Patient ID is required.",
+    });
+  }
+
+  getPatientById(
+    id,
+    (err, patient) => {
+
+      if (err) {
+
+        console.error(
+          "❌ Get patient error:",
+          err.message
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to fetch patient information.",
+        });
+      }
+
+      if (!patient) {
+        return res.status(404).json({
+          message:
+            "Patient not found.",
+        });
+      }
+
+      return res.json(patient);
+    }
+  );
+};
+
+
+// =====================================================
 // GET ALL PATIENTS
-// ADMIN ONLY
 // =====================================================
 
 const getPatients = (req, res) => {
@@ -177,7 +216,6 @@ const getPatients = (req, res) => {
 
 // =====================================================
 // DELETE PATIENT
-// ADMIN ONLY
 // =====================================================
 
 const deletePatient = (req, res) => {
@@ -203,8 +241,7 @@ const deletePatient = (req, res) => {
         );
 
         if (
-          err.message ===
-          "Patient not found."
+          err.message === "Patient not found."
         ) {
           return res.status(404).json({
             message:
@@ -234,6 +271,7 @@ const deletePatient = (req, res) => {
 module.exports = {
   registerPatient,
   loginPatient,
+  getPatient,
   getPatients,
   deletePatient,
 };

@@ -144,12 +144,49 @@ const findPatient = (
           }
 
           // Never send password hash
-          // to the controller/frontend.
           delete patient.password;
 
           callback(null, patient);
         }
       );
+    }
+  );
+};
+
+
+// =====================================================
+// GET PATIENT BY ID
+// =====================================================
+
+const getPatientById = (id, callback) => {
+
+  if (!id) {
+    return callback(
+      new Error("Patient ID is required.")
+    );
+  }
+
+  const sql = `
+    SELECT
+      id,
+      fullName,
+      email,
+      phone,
+      role
+    FROM patients
+    WHERE id = ?
+  `;
+
+  db.get(
+    sql,
+    [id],
+    (err, patient) => {
+
+      if (err) {
+        return callback(err);
+      }
+
+      callback(null, patient);
     }
   );
 };
@@ -222,6 +259,7 @@ const deletePatientById = (
 module.exports = {
   createPatient,
   findPatient,
+  getPatientById,
   getAllPatients,
   deletePatientById,
 };

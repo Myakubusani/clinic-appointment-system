@@ -3,10 +3,16 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-// Database
-require("./database/database");
+// =====================================================
+// DATABASE
+// =====================================================
 
-// Routes
+const db = require("./database/database");
+
+// =====================================================
+// ROUTES
+// =====================================================
+
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const loginRoutes = require("./routes/loginRoutes");
@@ -16,9 +22,17 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const medicalRecordRoutes = require("./routes/medicalRecordRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
+// =====================================================
+// REMINDER SERVICE
+// =====================================================
+
 const {
   startReminderService,
 } = require("./services/reminderService");
+
+// =====================================================
+// EXPRESS APP
+// =====================================================
 
 const app = express();
 
@@ -35,12 +49,14 @@ app.disable("x-powered-by");
 // CORS
 // =====================================================
 
-// During local development, allow your Vite frontend.
-// Later, we will change this to your production frontend URL.
-
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+
+  // Production frontend
+  "https://clinic-appointment-system-zei9.onrender.com",
+
+  // Keep this if this is the exact frontend URL you previously used
   "https://clinic-appointment-frontend-zei9.onrender.com",
 ];
 
@@ -49,7 +65,7 @@ app.use(
     origin: (origin, callback) => {
 
       // Allow requests with no origin
-      // (Postman, mobile apps, server-to-server requests, etc.)
+      // e.g. Postman, mobile apps, server-to-server requests
       if (!origin) {
         return callback(null, true);
       }
@@ -57,6 +73,8 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+
+      console.log("❌ CORS blocked origin:", origin);
 
       return callback(
         new Error("Not allowed by CORS")
@@ -85,7 +103,6 @@ app.use(
 // BODY PARSING
 // =====================================================
 
-// Limit JSON request size to reduce abuse
 app.use(
   express.json({
     limit: "10kb",
@@ -96,32 +113,57 @@ app.use(
 // API ROUTES
 // =====================================================
 
-app.use("/api/patients", patientRoutes);
+app.use(
+  "/api/patients",
+  patientRoutes
+);
 
-app.use("/api/login", loginRoutes);
+app.use(
+  "/api/login",
+  loginRoutes
+);
 
-app.use("/api/appointments", appointmentRoutes);
+app.use(
+  "/api/appointments",
+  appointmentRoutes
+);
 
-app.use("/api/doctors", doctorRoutes);
+app.use(
+  "/api/doctors",
+  doctorRoutes
+);
 
-app.use("/api/dashboard", dashboardRoutes);
+app.use(
+  "/api/dashboard",
+  dashboardRoutes
+);
 
-app.use("/api/medical-records", medicalRecordRoutes);
+app.use(
+  "/api/medical-records",
+  medicalRecordRoutes
+);
 
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-
-app.use("/api/notifications", notificationRoutes);
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
 
 // =====================================================
 // HOME ROUTE
 // =====================================================
 
 app.get("/", (req, res) => {
+
   res.json({
     message: "🏥 ClinicCare API is running",
     status: "online",
   });
+
 });
 
 // =====================================================
@@ -129,56 +171,150 @@ app.get("/", (req, res) => {
 // =====================================================
 
 app.use((req, res) => {
+
   res.status(404).json({
     message: "Route not found",
   });
+
 });
 
 // =====================================================
 // GLOBAL ERROR HANDLER
 // =====================================================
 
-app.use((err, req, res, next) => {
+app.use(
+  (err, req, res, next) => {
 
-  console.error("❌ Server Error:", err.message);
+    console.error(
+      "❌ Server Error:",
+      err.message
+    );
 
-  // CORS error
-  if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({
-      message: "Request blocked by CORS policy.",
+    // CORS error
+    if (
+      err.message ===
+      "Not allowed by CORS"
+    ) {
+
+      return res.status(403).json({
+        message:
+          "Request blocked by CORS policy.",
+      });
+
+    }
+
+    // JSON body too large
+    if (
+      err.type ===
+      "entity.too.large"
+    ) {
+
+      return res.status(413).json({
+        message:
+          "Request body is too large.",
+      });
+
+    }
+
+    // Invalid JSON
+    if (
+      err instanceof SyntaxError &&
+      err.status === 400
+    ) {
+
+      return res.status(400).json({
+        message:
+          "Invalid JSON request.",
+      });
+
+    }
+
+    return res.status(500).json({
+      message:
+        "Internal server error.",
     });
-  }
 
-  // JSON body too large
-  if (err.type === "entity.too.large") {
-    return res.status(413).json({
-      message: "Request body is too large.",
-    });
   }
+);
 
-  // Invalid JSON
-  if (err instanceof SyntaxError && err.status === 400) {
-    return res.status(400).json({
-      message: "Invalid JSON request.",
-    });
-  }
+// =====================================================
+// START SERVER AFTER DATABASE IS READY
+// =====================================================
 
-  return res.status(500).json({
-    message: "Internal server error.",
+db.ready
+  .then(() => {
+
+    console.log("");
+    console.log(
+      "========================================"
+    );
+    console.log(
+      "✅ DATABASE INITIALIZATION COMPLETED"
+    );
+    console.log(
+      "========================================"
+    );
+
+    app.listen(
+      PORT,
+      () => {
+
+        console.log("");
+        console.log(
+          "========================================"
+        );
+
+        console.log(
+          `🚀 Server running on port ${PORT}`
+        );
+
+        console.log(
+          `🌐 API: http://localhost:${PORT}`
+        );
+
+        console.log(
+          "🔐 Security middleware enabled."
+        );
+
+        console.log(
+          "📧 Email service ready."
+        );
+
+        console.log(
+          "🔔 Starting appointment reminder service..."
+        );
+
+        console.log(
+          "========================================"
+        );
+
+        // Start reminders ONLY after
+        // database initialization has completed
+        startReminderService();
+
+      }
+    );
+
+  })
+  .catch((error) => {
+
+    console.error("");
+    console.error(
+      "========================================"
+    );
+
+    console.error(
+      "❌ DATABASE INITIALIZATION FAILED"
+    );
+
+    console.error(
+      error
+    );
+
+    console.error(
+      "========================================"
+    );
+
+    process.exit(1);
+
   });
-});
-
-// =====================================================
-// START SERVER
-// =====================================================
-
-app.listen(PORT, () => {
-
-  console.log(
-    `🚀 Server running on http://localhost:${PORT}`
-  );
-
-  console.log("🔐 Security middleware enabled.");
-
-  startReminderService();
-});

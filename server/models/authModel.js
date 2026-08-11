@@ -57,7 +57,7 @@ const loginUser = (email, password, callback) => {
             }
 
             // Wrong admin password.
-            // Continue checking the other account tables.
+            // Continue checking other account tables.
             checkDoctor();
           }
         );
@@ -80,6 +80,7 @@ const loginUser = (email, password, callback) => {
           id,
           fullName,
           email,
+          phone,
           password,
           role
         FROM doctors
@@ -130,6 +131,7 @@ const loginUser = (email, password, callback) => {
           id,
           fullName,
           email,
+          phone,
           password,
           role
         FROM patients
@@ -160,15 +162,24 @@ const loginUser = (email, password, callback) => {
               return callback(null, null);
             }
 
+            // Never send password hash to frontend
+            delete patient.password;
+
             callback(null, patient);
           }
         );
       }
     );
   }
+} 
 
-};
 
+
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
   loginUser,
