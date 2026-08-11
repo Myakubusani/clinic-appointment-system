@@ -2,11 +2,6 @@ const express = require("express");
 
 const router = express.Router();
 
-// IMPORTANT:
-// authMiddleware exports an object containing
-// verifyToken and allowRoles.
-// Therefore we must destructure them here.
-
 const {
   verifyToken,
   allowRoles,
@@ -20,7 +15,6 @@ const {
   updateAppointment,
 } = require("../controllers/appointmentController");
 
-
 // =====================================================
 // BOOK APPOINTMENT
 // PATIENT ONLY
@@ -33,22 +27,10 @@ router.post(
   bookAppointment
 );
 
-
-// =====================================================
-// GET ONE APPOINTMENT
-// AUTHENTICATED USER
-// =====================================================
-
-router.get(
-  "/:id",
-  verifyToken,
-  getAppointment
-);
-
-
 // =====================================================
 // GET PATIENT APPOINTMENTS
 // AUTHENTICATED USER
+// IMPORTANT: THIS MUST COME BEFORE /:id
 // =====================================================
 
 router.get(
@@ -56,7 +38,6 @@ router.get(
   verifyToken,
   getMyAppointments
 );
-
 
 // =====================================================
 // GET ALL APPOINTMENTS
@@ -70,6 +51,17 @@ router.get(
   getAllAppointments
 );
 
+// =====================================================
+// GET ONE APPOINTMENT
+// AUTHENTICATED USER
+// IMPORTANT: KEEP THIS AFTER SPECIFIC ROUTES
+// =====================================================
+
+router.get(
+  "/:id",
+  verifyToken,
+  getAppointment
+);
 
 // =====================================================
 // UPDATE APPOINTMENT
@@ -82,10 +74,5 @@ router.put(
   allowRoles("admin"),
   updateAppointment
 );
-
-
-// =====================================================
-// EXPORT ROUTER
-// =====================================================
 
 module.exports = router;
