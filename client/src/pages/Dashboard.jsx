@@ -53,19 +53,22 @@ function Dashboard() {
         );
       }
 
-    } catch (error) {
+    } catch (err) {
+  console.error("================================");
+  console.error("❌ APPOINTMENT ERROR");
+  console.error("MESSAGE:", err.message);
+  console.error("CODE:", err.code);
+  console.error("NAME:", err.name);
+  console.error("STATUS:", err.response?.status);
+  console.error("DATA:", err.response?.data);
+  console.error("URL:", err.config?.url);
+  console.error("BASE URL:", err.config?.baseURL);
+  console.error("FULL CONFIG:", err.config);
+  console.error("================================");
 
-      console.error(
-        "❌ Patient data error:",
-        error
-      );
-
-    }
-  };
-
-  loadPatient();
-
-}, []);
+  toast.error("Failed to load appointments");
+  setAppointments([]);
+}
 
   // ==========================================
   // LOAD PATIENT APPOINTMENTS
