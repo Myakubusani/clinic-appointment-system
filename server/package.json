@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^9.0.3",
     "react-router-dom": "^7.18.1",
+    "resend": "^6.19.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

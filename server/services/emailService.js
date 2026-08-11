@@ -1,34 +1,8 @@
 require("dotenv").config();
 
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// =====================================================
-// GMAIL SMTP CONFIGURATION
-// =====================================================
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// =====================================================
-// TEST GMAIL CONNECTION
-// =====================================================
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.log("❌ Gmail connection failed:");
-    console.log(error);
-  } else {
-    console.log("✅ Gmail SMTP connection is ready");
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // =====================================================
 // GENERAL APPOINTMENT EMAIL
@@ -43,22 +17,19 @@ const sendAppointmentEmail = async (
   status = "Booked"
 ) => {
   try {
-    await transporter.sendMail({
-      from: `"ClinicCare" <${process.env.EMAIL_USER}>`,
-
-      to,
+    const { data, error } = await resend.emails.send({
+      from: `ClinicCare <${process.env.EMAIL_USER}>`,
+      to: [to],
 
       subject: `Appointment ${status} - ClinicCare`,
 
       html: `
-        <div
-          style="
-            font-family:Arial,sans-serif;
-            padding:20px;
-            max-width:600px;
-            margin:auto;
-          "
-        >
+        <div style="
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          max-width: 600px;
+          margin: auto;
+        ">
 
           <h2 style="color:#0d6efd;">
             🏥 ClinicCare Appointment
@@ -82,7 +53,6 @@ const sendAppointmentEmail = async (
               width:100%;
             "
           >
-
             <tr>
               <td><strong>👨‍⚕️ Doctor</strong></td>
               <td>${doctor}</td>
@@ -102,7 +72,6 @@ const sendAppointmentEmail = async (
               <td><strong>📌 Status</strong></td>
               <td>${status}</td>
             </tr>
-
           </table>
 
           <br>
@@ -123,17 +92,24 @@ const sendAppointmentEmail = async (
       `,
     });
 
-    console.log("✅ Appointment email sent successfully");
+    if (error) {
+      console.error("❌ Resend appointment email error:", error);
+      return false;
+    }
+
+    console.log(
+      "✅ Appointment email sent successfully:",
+      data?.id
+    );
 
     return true;
 
   } catch (err) {
-
-    console.log("❌ Appointment Email Error:", err);
-
+    console.error("❌ Appointment Email Error:", err);
     return false;
   }
 };
+
 
 // =====================================================
 // APPOINTMENT REMINDER EMAIL
@@ -146,26 +122,20 @@ const sendAppointmentReminderEmail = async (
   appointmentDate,
   appointmentTime
 ) => {
-
   try {
-
-    await transporter.sendMail({
-
-      from: `"ClinicCare" <${process.env.EMAIL_USER}>`,
-
-      to,
+    const { data, error } = await resend.emails.send({
+      from: `ClinicCare <${process.env.EMAIL_USER}>`,
+      to: [to],
 
       subject: "🔔 Appointment Reminder - ClinicCare",
 
       html: `
-        <div
-          style="
-            font-family:Arial,sans-serif;
-            padding:20px;
-            max-width:600px;
-            margin:auto;
-          "
-        >
+        <div style="
+          font-family:Arial,sans-serif;
+          padding:20px;
+          max-width:600px;
+          margin:auto;
+        ">
 
           <h2 style="color:#0d6efd;">
             🏥 ClinicCare
@@ -195,40 +165,22 @@ const sendAppointmentReminderEmail = async (
           >
 
             <tr>
-              <td>
-                <strong>👨‍⚕️ Doctor</strong>
-              </td>
-
-              <td>
-                ${doctor}
-              </td>
+              <td><strong>👨‍⚕️ Doctor</strong></td>
+              <td>${doctor}</td>
             </tr>
 
             <tr>
-              <td>
-                <strong>📅 Date</strong>
-              </td>
-
-              <td>
-                ${appointmentDate}
-              </td>
+              <td><strong>📅 Date</strong></td>
+              <td>${appointmentDate}</td>
             </tr>
 
             <tr>
-              <td>
-                <strong>🕐 Time</strong>
-              </td>
-
-              <td>
-                ${appointmentTime}
-              </td>
+              <td><strong>🕐 Time</strong></td>
+              <td>${appointmentTime}</td>
             </tr>
 
             <tr>
-              <td>
-                <strong>📌 Status</strong>
-              </td>
-
+              <td><strong>📌 Status</strong></td>
               <td>
                 <strong style="color:#198754;">
                   Approved
@@ -238,14 +190,12 @@ const sendAppointmentReminderEmail = async (
 
           </table>
 
-          <div
-            style="
-              background:#fff3cd;
-              padding:15px;
-              margin-top:20px;
-              border-radius:5px;
-            "
-          >
+          <div style="
+            background:#fff3cd;
+            padding:15px;
+            margin-top:20px;
+            border-radius:5px;
+          ">
 
             <strong>
               ⏰ Please remember to arrive on time.
@@ -271,25 +221,26 @@ const sendAppointmentReminderEmail = async (
       `,
     });
 
+    if (error) {
+      console.error("❌ Resend reminder email error:", error);
+      return false;
+    }
+
     console.log(
-      `✅ Reminder email sent to ${to}`
+      `✅ Reminder email sent successfully: ${data?.id}`
     );
 
     return true;
 
   } catch (err) {
-
-    console.log(
-      "❌ Reminder Email Error:",
-      err
-    );
-
+    console.error("❌ Reminder Email Error:", err);
     return false;
   }
 };
 
+
 // =====================================================
-// EXPORT FUNCTIONS
+// EXPORT
 // =====================================================
 
 module.exports = {
