@@ -50,16 +50,14 @@ app.disable("x-powered-by");
 // =====================================================
 
 const allowedOrigins = [
-  // Local development
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 
-  // Vercel frontend
-  "https://clinic-appointment-system-ou89-ntisr49xz-sani-dev1.vercel.app",
+  // Vercel Production
+  "https://clinic-appointment-system-ou89.vercel.app",
 
-  // Render frontend URLs, if still used
-  "https://clinic-appointment-system-zei9.onrender.com",
-  "https://clinic-appointment-frontend-zei9.onrender.com",
+  // Render
+  "https://clinic-appointment-system-xmai.onrender.com",
 ];
 
 app.use(
