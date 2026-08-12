@@ -18,7 +18,7 @@ const sendAppointmentEmail = async (
 ) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: `ClinicCare <${process.env.EMAIL_USER}>`,
+      from: `ClinicCare <onboarding@resend.dev>`,
       to: [to],
 
       subject: `Appointment ${status} - ClinicCare`,
@@ -124,7 +124,7 @@ const sendAppointmentReminderEmail = async (
 ) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: `ClinicCare <${process.env.EMAIL_USER}>`,
+      from: `ClinicCare <onboarding@resend.dev>`,
       to: [to],
 
       subject: "🔔 Appointment Reminder - ClinicCare",
