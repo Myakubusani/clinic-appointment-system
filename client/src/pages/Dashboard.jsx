@@ -14,62 +14,24 @@ function Dashboard() {
   // LOAD PATIENT
   // ==========================================
   useEffect(() => {
-  const loadPatient = async () => {
+  const storedPatient = localStorage.getItem("patient");
 
-    const storedPatient =
-      localStorage.getItem("patient");
+  if (!storedPatient) {
+    setLoadingAppointment(false);
+    return;
+  }
 
-    if (!storedPatient) {
-      setLoadingAppointment(false);
-      return;
-    }
+  try {
+    const parsedPatient = JSON.parse(storedPatient);
 
-    try {
+    console.log("✅ Stored patient:", parsedPatient);
 
-      const parsedPatient =
-        JSON.parse(storedPatient);
-
-      // First show stored information
-      setPatient(parsedPatient);
-
-      // Get latest information from database
-      if (parsedPatient.id) {
-
-        const response = await API.get(
-          `/patients/${parsedPatient.id}`
-        );
-
-        console.log(
-          "✅ Latest patient information:",
-          response.data
-        );
-
-        setPatient(response.data);
-
-        // Update localStorage too
-        localStorage.setItem(
-          "patient",
-          JSON.stringify(response.data)
-        );
-      }
-
-    } catch (err) {
-  console.error("================================");
-  console.error("❌ APPOINTMENT ERROR");
-  console.error("MESSAGE:", err.message);
-  console.error("CODE:", err.code);
-  console.error("NAME:", err.name);
-  console.error("STATUS:", err.response?.status);
-  console.error("DATA:", err.response?.data);
-  console.error("URL:", err.config?.url);
-  console.error("BASE URL:", err.config?.baseURL);
-  console.error("FULL CONFIG:", err.config);
-  console.error("================================");
-
-  toast.error("Failed to load appointments");
-  setAppointments([]);
-}
-
+    setPatient(parsedPatient);
+  } catch (error) {
+    console.error("❌ Patient data error:", error);
+    setLoadingAppointment(false);
+  }
+}, []);
   // ==========================================
   // LOAD PATIENT APPOINTMENTS
   // ==========================================
