@@ -38,54 +38,32 @@ function Sidebar() {
 
   return (
     <>
-      {/* =================================================
-          MOBILE MENU BUTTON
-      ================================================= */}
-
+      {/* Mobile menu button */}
       <button
         className="btn btn-primary d-md-none position-fixed top-0 start-0 m-2"
         type="button"
         data-bs-toggle="offcanvas"
         data-bs-target="#adminSidebar"
         aria-controls="adminSidebar"
-        style={{
-          zIndex: 1050,
-        }}
+        style={{ zIndex: 1050 }}
       >
         ☰
       </button>
 
-
-      {/* =================================================
-          SIDEBAR
-      ================================================= */}
-
+      {/* Sidebar */}
       <div
         id="adminSidebar"
-        className="
-          offcanvas-md
-          offcanvas-start
-          bg-primary
-          text-white
-        "
+        className="offcanvas-md offcanvas-start bg-primary text-white"
         tabIndex="-1"
-        aria-labelledby="adminSidebarLabel"
         style={{
           width: "250px",
+          minWidth: "250px",
           minHeight: "100vh",
         }}
       >
-
-        {/* =================================================
-            SIDEBAR HEADER
-        ================================================= */}
-
+        {/* Mobile header */}
         <div className="offcanvas-header d-md-none">
-
-          <h5
-            className="offcanvas-title"
-            id="adminSidebarLabel"
-          >
+          <h5 className="offcanvas-title">
             🏥 ClinicCare
           </h5>
 
@@ -94,45 +72,43 @@ function Sidebar() {
             className="btn-close btn-close-white"
             data-bs-dismiss="offcanvas"
             aria-label="Close"
-          ></button>
-
+          />
         </div>
 
-
-        {/* =================================================
-            SIDEBAR CONTENT
-        ================================================= */}
-
+        {/* Sidebar content */}
         <div className="offcanvas-body d-flex flex-column p-3">
 
           {/* Desktop title */}
-
           <h3 className="text-center mb-4 d-none d-md-block">
             🏥 ClinicCare
           </h3>
 
-
           {/* Navigation */}
-
-          <div>
-
+          <nav>
             {navItems.map((item) => (
-
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={linkClass}
-                data-bs-dismiss="offcanvas"
+                onClick={(e) => {
+                  // Close mobile offcanvas only
+                  if (window.innerWidth < 768) {
+                    const sidebar =
+                      document.getElementById("adminSidebar");
+
+                    const bsOffcanvas =
+                      window.bootstrap?.Offcanvas.getInstance(sidebar);
+
+                    bsOffcanvas?.hide();
+                  }
+                }}
               >
                 {item.icon} {item.label}
               </NavLink>
-
             ))}
-
-          </div>
+          </nav>
 
         </div>
-
       </div>
     </>
   );
