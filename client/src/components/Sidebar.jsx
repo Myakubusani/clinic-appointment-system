@@ -32,13 +32,6 @@ function Sidebar() {
     },
   ];
 
-  const linkClass = ({ isActive }) =>
-    `btn w-100 text-start mb-2 ${
-      isActive
-        ? "btn-light text-primary fw-bold"
-        : "btn-primary text-white"
-    }`;
-
   const handleNavigation = () => {
     setIsOpen(false);
   };
@@ -48,9 +41,13 @@ function Sidebar() {
       {/* Mobile menu button */}
       <button
         type="button"
-        className="btn btn-primary d-md-none position-fixed top-0 start-0 m-2"
+        className="btn btn-primary d-md-none position-fixed"
         onClick={() => setIsOpen(true)}
-        style={{ zIndex: 1050 }}
+        style={{
+          top: "10px",
+          left: "10px",
+          zIndex: 1100,
+        }}
       >
         ☰
       </button>
@@ -58,42 +55,42 @@ function Sidebar() {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100"
+          className="position-fixed d-md-none"
           onClick={() => setIsOpen(false)}
           style={{
-            backgroundColor: "rgba(0,0,0,0.5)",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
             zIndex: 1040,
           }}
         />
       )}
 
       {/* Sidebar */}
-      <div
-        className="bg-primary text-white position-fixed top-0 start-0 h-100"
+      <aside
+        className={`bg-primary text-white position-fixed top-0 start-0 h-100 ${
+          isOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
         style={{
           width: "250px",
-          minWidth: "250px",
           zIndex: 1050,
-
-          transform:
-            isOpen || window.innerWidth >= 768
-              ? "translateX(0)"
-              : "translateX(-100%)",
-
           transition: "transform 0.3s ease",
         }}
       >
-        {/* Sidebar header */}
+        {/* Header */}
         <div className="p-3 d-flex justify-content-between align-items-center">
           <h5 className="mb-0">
             🏥 ClinicCare
           </h5>
 
-          {/* Mobile close button */}
+          {/* Close button - mobile only */}
           <button
             type="button"
             className="btn btn-close btn-close-white d-md-none"
             onClick={() => setIsOpen(false)}
+            aria-label="Close menu"
           />
         </div>
 
@@ -103,16 +100,23 @@ function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={linkClass}
               onClick={handleNavigation}
+              className={({ isActive }) =>
+                `btn w-100 text-start mb-2 ${
+                  isActive
+                    ? "btn-light text-primary fw-bold"
+                    : "btn-primary text-white"
+                }`
+              }
             >
-              {item.icon} {item.label}
+              <span className="me-2">{item.icon}</span>
+              {item.label}
             </NavLink>
           ))}
         </nav>
-      </div>
+      </aside>
 
-      {/* Desktop spacing */}
+      {/* Desktop sidebar space */}
       <div
         className="d-none d-md-block"
         style={{
