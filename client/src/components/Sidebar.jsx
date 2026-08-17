@@ -1,6 +1,9 @@
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
 
 function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+
   const navItems = [
     {
       to: "/admin",
@@ -36,80 +39,87 @@ function Sidebar() {
         : "btn-primary text-white"
     }`;
 
+  const handleNavigation = () => {
+    setIsOpen(false);
+  };
+
   return (
     <>
       {/* Mobile menu button */}
       <button
-        className="btn btn-primary d-md-none position-fixed top-0 start-0 m-2"
         type="button"
-        data-bs-toggle="offcanvas"
-        data-bs-target="#adminSidebar"
-        aria-controls="adminSidebar"
+        className="btn btn-primary d-md-none position-fixed top-0 start-0 m-2"
+        onClick={() => setIsOpen(true)}
         style={{ zIndex: 1050 }}
       >
         ☰
       </button>
 
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100"
+          onClick={() => setIsOpen(false)}
+          style={{
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 1040,
+          }}
+        />
+      )}
+
       {/* Sidebar */}
       <div
-        id="adminSidebar"
-        className="offcanvas-md offcanvas-start bg-primary text-white"
-        tabIndex="-1"
+        className="bg-primary text-white position-fixed top-0 start-0 h-100"
         style={{
           width: "250px",
           minWidth: "250px",
-          minHeight: "100vh",
+          zIndex: 1050,
+
+          transform:
+            isOpen || window.innerWidth >= 768
+              ? "translateX(0)"
+              : "translateX(-100%)",
+
+          transition: "transform 0.3s ease",
         }}
       >
-        {/* Mobile header */}
-        <div className="offcanvas-header d-md-none">
-          <h5 className="offcanvas-title">
+        {/* Sidebar header */}
+        <div className="p-3 d-flex justify-content-between align-items-center">
+          <h5 className="mb-0">
             🏥 ClinicCare
           </h5>
 
+          {/* Mobile close button */}
           <button
             type="button"
-            className="btn-close btn-close-white"
-            data-bs-dismiss="offcanvas"
-            aria-label="Close"
+            className="btn btn-close btn-close-white d-md-none"
+            onClick={() => setIsOpen(false)}
           />
         </div>
 
-        {/* Sidebar content */}
-        <div className="offcanvas-body d-flex flex-column p-3">
-
-          {/* Desktop title */}
-          <h3 className="text-center mb-4 d-none d-md-block">
-            🏥 ClinicCare
-          </h3>
-
-          {/* Navigation */}
-          <nav>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={linkClass}
-                onClick={(e) => {
-                  // Close mobile offcanvas only
-                  if (window.innerWidth < 768) {
-                    const sidebar =
-                      document.getElementById("adminSidebar");
-
-                    const bsOffcanvas =
-                      window.bootstrap?.Offcanvas.getInstance(sidebar);
-
-                    bsOffcanvas?.hide();
-                  }
-                }}
-              >
-                {item.icon} {item.label}
-              </NavLink>
-            ))}
-          </nav>
-
-        </div>
+        {/* Navigation */}
+        <nav className="p-3">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={linkClass}
+              onClick={handleNavigation}
+            >
+              {item.icon} {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
+
+      {/* Desktop spacing */}
+      <div
+        className="d-none d-md-block"
+        style={{
+          width: "250px",
+          minWidth: "250px",
+        }}
+      />
     </>
   );
 }
