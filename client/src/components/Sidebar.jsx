@@ -60,8 +60,8 @@ function Sidebar() {
           style={{
             top: 0,
             left: 0,
-            width: "100%",
-            height: "100%",
+            width: "100vw",
+            height: "100vh",
             backgroundColor: "rgba(0, 0, 0, 0.5)",
             zIndex: 1040,
           }}
@@ -70,13 +70,14 @@ function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`bg-primary text-white position-fixed top-0 start-0 h-100 ${
-          isOpen ? "sidebar-open" : "sidebar-closed"
-        }`}
+        className="bg-primary text-white position-fixed top-0 start-0 h-100"
         style={{
           width: "250px",
           zIndex: 1050,
           transition: "transform 0.3s ease",
+          transform: isOpen
+            ? "translateX(0)"
+            : "translateX(-100%)",
         }}
       >
         {/* Header */}
@@ -85,7 +86,6 @@ function Sidebar() {
             🏥 ClinicCare
           </h5>
 
-          {/* Close button - mobile only */}
           <button
             type="button"
             className="btn btn-close btn-close-white d-md-none"
@@ -109,7 +109,10 @@ function Sidebar() {
                 }`
               }
             >
-              <span className="me-2">{item.icon}</span>
+              <span className="me-2">
+                {item.icon}
+              </span>
+
               {item.label}
             </NavLink>
           ))}
@@ -124,6 +127,17 @@ function Sidebar() {
           minWidth: "250px",
         }}
       />
+
+      {/* Desktop sidebar */}
+      <style>
+        {`
+          @media (min-width: 768px) {
+            aside {
+              transform: translateX(0) !important;
+            }
+          }
+        `}
+      </style>
     </>
   );
 }
