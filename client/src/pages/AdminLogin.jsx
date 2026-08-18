@@ -1,53 +1,122 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
 function AdminLogin() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Default Admin Login
-    if (username === "admin" && password === "admin123") {
+    try {
+      setLoading(true);
+
+      const response = await API.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
+
+      const { token, role, user } = response.data;
+
+      // Make sure this is actually an admin account
+      if (role !== "admin") {
+        alert("This account does not have administrator access.");
+        return;
+      }
+
+      // Save authentication information
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Keep compatibility with existing code
       localStorage.setItem("admin", "true");
-      navigate("/admin");
-    } else {
-      alert("Invalid Admin Credentials");
+
+      // Go to Admin Dashboard
+      navigate("/admin", { replace: true });
+
+    } catch (error) {
+      console.error("Admin login error:", error);
+
+      const message =
+        error.response?.data?.message ||
+        "Login failed. Please check your email and password.";
+
+      alert(message);
+
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "60px auto" }}>
-      <h2>Admin Login</h2>
+    <div
+      className="container d-flex justify-content-center align-items-center"
+      style={{ minHeight: "100vh" }}
+    >
+      <div
+        className="card shadow border-0 p-4"
+        style={{ maxWidth: "400px", width: "100%" }}
+      >
+        <div className="text-center mb-4">
+          <div style={{ fontSize: "3rem" }}>🏥</div>
 
-      <form onSubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
+          <h2 className="mb-1">
+            Admin Login
+          </h2>
 
-        <br /><br />
+          <p className="text-muted mb-0">
+            ClinicCare Hospital Management System
+          </p>
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <form onSubmit={handleLogin}>
 
-        <br /><br />
+          <div className="mb-3">
+            <label className="form-label">
+              Admin Email
+            </label>
 
-        <button type="submit">
-          Login
-        </button>
-      </form>
+            <input
+              type="email"
+              className="form-control"
+              placeholder="admin@cliniccare.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">
+              Password
+            </label>
+
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+
+        </form>
+
+      </div>
     </div>
   );
 }
