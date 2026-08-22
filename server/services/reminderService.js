@@ -4,12 +4,10 @@ const {
   sendAppointmentReminderEmail,
 } = require("./emailService");
 
-
 // =====================================================
 // GET TOMORROW'S DATE
 // =====================================================
 const getTomorrowDate = () => {
-
   const tomorrow = new Date();
 
   tomorrow.setDate(
@@ -33,8 +31,7 @@ const getTomorrowDate = () => {
 // =====================================================
 // CHECK UPCOMING APPOINTMENTS
 // =====================================================
-const checkAppointmentReminders = () => {
-
+const checkAppointmentReminders = async () => {
   const tomorrow = getTomorrowDate();
 
   console.log("");
@@ -43,134 +40,142 @@ const checkAppointmentReminders = () => {
   console.log("Tomorrow:", tomorrow);
   console.log("========================================");
 
+  try {
 
-  const sql = `
-    SELECT
-      appointments.id,
-      appointments.patientName,
-      appointments.doctor,
-      appointments.appointmentDate,
-      appointments.appointmentTime,
-      appointments.status,
-      appointments.reminderSent,
-      patients.email
+    // =================================================
+    // GET APPROVED APPOINTMENTS FOR TOMORROW
+    // =================================================
 
-    FROM appointments
+    const result = await db.query(
+      `
+      SELECT
+        appointments.id,
+        appointments."patientName",
+        appointments.doctor,
+        appointments."appointmentDate",
+        appointments."appointmentTime",
+        appointments.status,
+        appointments."reminderSent",
+        patients.email
 
-    INNER JOIN patients
-      ON appointments.patientName = patients.fullName
+      FROM appointments
 
-    WHERE appointments.appointmentDate = ?
-      AND appointments.status = 'Approved'
-      AND (
-        appointments.reminderSent = 0
-        OR appointments.reminderSent IS NULL
-      )
-  `;
+      INNER JOIN patients
+        ON appointments."patientName" = patients."fullName"
 
+      WHERE appointments."appointmentDate" = $1
+        AND appointments.status = 'Approved'
+        AND (
+          appointments."reminderSent" = 0
+          OR appointments."reminderSent" IS NULL
+        )
+      `,
+      [tomorrow]
+    );
 
-  db.all(
-    sql,
-    [tomorrow],
-    async (err, appointments) => {
+    const appointments = result.rows;
 
-      if (err) {
+    // =================================================
+    // NO REMINDERS
+    // =================================================
 
-        console.log(
-          "❌ Reminder database error:",
-          err
-        );
-
-        return;
-      }
-
-
-      if (appointments.length === 0) {
-
-        console.log(
-          "ℹ️ No appointment reminders needed."
-        );
-
-        return;
-      }
-
-
+    if (appointments.length === 0) {
       console.log(
-        `📋 Found ${appointments.length} appointment(s) requiring reminder.`
+        "ℹ️ No appointment reminders needed."
       );
 
+      return;
+    }
 
-      for (const appointment of appointments) {
+    console.log(
+      `📋 Found ${appointments.length} appointment(s) requiring reminder.`
+    );
 
-        console.log("");
+    // =================================================
+    // PROCESS EACH APPOINTMENT
+    // =================================================
+
+    for (const appointment of appointments) {
+
+      console.log("");
+      console.log(
+        "Processing appointment:",
+        appointment.id
+      );
+
+      // =================================================
+      // CHECK PATIENT EMAIL
+      // =================================================
+
+      if (!appointment.email) {
         console.log(
-          "Processing appointment:",
-          appointment.id
+          "⚠️ Patient has no email:",
+          appointment.patientName
         );
 
+        continue;
+      }
 
-        if (!appointment.email) {
+      // =================================================
+      // SEND REMINDER EMAIL
+      // =================================================
 
-          console.log(
-            "⚠️ Patient has no email:",
-            appointment.patientName
-          );
-
-          continue;
-        }
-
+      try {
 
         const sent =
           await sendAppointmentReminderEmail(
-
             appointment.email,
-
             appointment.patientName,
-
             appointment.doctor,
-
             appointment.appointmentDate,
-
             appointment.appointmentTime
-
           );
 
+        // =================================================
+        // MARK REMINDER AS SENT
+        // =================================================
 
         if (sent) {
 
-          db.run(
+          await db.query(
             `
-              UPDATE appointments
-              SET reminderSent = 1
-              WHERE id = ?
+            UPDATE appointments
+            SET "reminderSent" = 1
+            WHERE id = $1
             `,
-            [appointment.id],
-            (updateErr) => {
+            [appointment.id]
+          );
 
-              if (updateErr) {
+          console.log(
+            `✅ Appointment ${appointment.id} marked as reminded.`
+          );
 
-                console.log(
-                  "❌ Failed to mark reminder as sent:",
-                  updateErr
-                );
+        } else {
 
-              } else {
-
-                console.log(
-                  `✅ Appointment ${appointment.id} marked as reminded.`
-                );
-
-              }
-
-            }
+          console.log(
+            `⚠️ Reminder email was not sent for appointment ${appointment.id}.`
           );
 
         }
 
-      }
+      } catch (emailError) {
 
+        console.log(
+          `❌ Failed to send reminder for appointment ${appointment.id}:`,
+          emailError.message
+        );
+
+      }
     }
-  );
+
+  } catch (err) {
+
+    console.log(
+      "❌ Reminder database error:",
+      err
+    );
+
+  }
 };
 
 
@@ -183,10 +188,8 @@ const startReminderService = () => {
     "🔔 Appointment reminder service started."
   );
 
-
   // Check immediately when server starts
   checkAppointmentReminders();
-
 
   // Check every hour
   setInterval(
