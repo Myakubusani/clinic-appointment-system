@@ -1,60 +1,129 @@
 const db = require("../database/database");
 const bcrypt = require("bcryptjs");
 
-const loginUser = (email, password, callback) => {
-  // Check Admins
-  db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
-    if (err) return callback(err);
+// =====================================================
+// LOGIN USER
+// Checks Admin → Doctor → Patient
+// =====================================================
 
-    if (user) {
-      return bcrypt.compare(password, user.password, (err, match) => {
-        if (err) return callback(err);
+const loginUser = async (
+  email,
+  password,
+  callback
+) => {
+  try {
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
-        if (match) {
-          return callback(null, user);
-        }
-
-        return callback(null, null);
-      });
+    if (!normalizedEmail || !password) {
+      return callback(null, null);
     }
 
-    // Check Doctors
-    db.get("SELECT * FROM doctors WHERE email = ?", [email], (err, doctor) => {
-      if (err) return callback(err);
+    // =====================================================
+    // CHECK ADMINS
+    // =====================================================
 
-      if (doctor) {
-        return bcrypt.compare(password, doctor.password, (err, match) => {
-          if (err) return callback(err);
+    const userResult = await db.query(
+      `
+      SELECT *
+      FROM users
+      WHERE LOWER(email) = $1
+      LIMIT 1
+      `,
+      [normalizedEmail]
+    );
 
-          if (match) {
-            return callback(null, doctor);
-          }
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
 
-          return callback(null, null);
-        });
+      const match = await bcrypt.compare(
+        password,
+        user.password
+      );
+
+      if (match) {
+        delete user.password;
+        return callback(null, user);
       }
+    }
 
-      // Check Patients
-      db.get("SELECT * FROM patients WHERE email = ?", [email], (err, patient) => {
-        if (err) return callback(err);
+    // =====================================================
+    // CHECK DOCTORS
+    // =====================================================
 
-        if (!patient) {
-          return callback(null, null);
-        }
+    const doctorResult = await db.query(
+      `
+      SELECT *
+      FROM doctors
+      WHERE LOWER(email) = $1
+      LIMIT 1
+      `,
+      [normalizedEmail]
+    );
 
-        bcrypt.compare(password, patient.password, (err, match) => {
-          if (err) return callback(err);
+    if (doctorResult.rows.length > 0) {
+      const doctor = doctorResult.rows[0];
 
-          if (!match) {
-            return callback(null, null);
-          }
+      const match = await bcrypt.compare(
+        password,
+        doctor.password
+      );
 
-          callback(null, patient);
-        });
-      });
-    });
-  });
+      if (match) {
+        delete doctor.password;
+        return callback(null, doctor);
+      }
+    }
+
+    // =====================================================
+    // CHECK PATIENTS
+    // =====================================================
+
+    const patientResult = await db.query(
+      `
+      SELECT *
+      FROM patients
+      WHERE LOWER(email) = $1
+      LIMIT 1
+      `,
+      [normalizedEmail]
+    );
+
+    if (patientResult.rows.length > 0) {
+      const patient = patientResult.rows[0];
+
+      const match = await bcrypt.compare(
+        password,
+        patient.password
+      );
+
+      if (match) {
+        delete patient.password;
+        return callback(null, patient);
+      }
+    }
+
+    // =====================================================
+    // NO MATCH
+    // =====================================================
+
+    callback(null, null);
+
+  } catch (err) {
+    console.error(
+      "❌ LOGIN DATABASE ERROR:",
+      err.message
+    );
+
+    callback(err);
+  }
 };
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
   loginUser,

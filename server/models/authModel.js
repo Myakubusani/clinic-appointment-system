@@ -6,175 +6,148 @@ const bcrypt = require("bcryptjs");
 // Checks Admin → Doctor → Patient
 // =====================================================
 
-const loginUser = (email, password, callback) => {
+const loginUser = async (
+  email,
+  password,
+  callback
+) => {
+  try {
+    // Normalize email
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
-  // Normalize email
-  const normalizedEmail = String(email || "")
-    .trim()
-    .toLowerCase();
+    // Validate input
+    if (!normalizedEmail || !password) {
+      return callback(null, null);
+    }
 
-  // Validate input
-  if (!normalizedEmail || !password) {
-    return callback(null, null);
-  }
+    // =====================================================
+    // 1. CHECK ADMIN / STAFF
+    // =====================================================
 
-  // =====================================================
-  // 1. CHECK ADMIN / STAFF
-  // =====================================================
-
-  db.get(
-    `
+    const adminResult = await db.query(
+      `
       SELECT
         id,
-        fullName,
+        "fullName",
         email,
         password,
         role
       FROM users
-      WHERE LOWER(email) = ?
+      WHERE LOWER(email) = $1
       LIMIT 1
-    `,
-    [normalizedEmail],
-    (err, admin) => {
+      `,
+      [normalizedEmail]
+    );
 
-      if (err) {
-        return callback(err);
+    if (adminResult.rows.length > 0) {
+      const admin = adminResult.rows[0];
+
+      const match = await bcrypt.compare(
+        password,
+        admin.password
+      );
+
+      if (match) {
+        // Never send password hash
+        delete admin.password;
+
+        return callback(null, admin);
       }
 
-      if (admin) {
-
-        return bcrypt.compare(
-          password,
-          admin.password,
-          (err, match) => {
-
-            if (err) {
-              return callback(err);
-            }
-
-            if (match) {
-              return callback(null, admin);
-            }
-
-            // Wrong admin password.
-            // Continue checking other account tables.
-            checkDoctor();
-          }
-        );
-      }
-
-      checkDoctor();
+      // Wrong admin password.
+      // Continue checking doctor and patient.
     }
-  );
 
+    // =====================================================
+    // 2. CHECK DOCTOR
+    // =====================================================
 
-  // =====================================================
-  // 2. CHECK DOCTOR
-  // =====================================================
-
-  function checkDoctor() {
-
-    db.get(
+    const doctorResult = await db.query(
       `
-        SELECT
-          id,
-          fullName,
-          email,
-          phone,
-          password,
-          role
-        FROM doctors
-        WHERE LOWER(email) = ?
-        LIMIT 1
+      SELECT
+        id,
+        "fullName",
+        email,
+        phone,
+        password,
+        role
+      FROM doctors
+      WHERE LOWER(email) = $1
+      LIMIT 1
       `,
-      [normalizedEmail],
-      (err, doctor) => {
-
-        if (err) {
-          return callback(err);
-        }
-
-        if (!doctor) {
-          return checkPatient();
-        }
-
-        bcrypt.compare(
-          password,
-          doctor.password,
-          (err, match) => {
-
-            if (err) {
-              return callback(err);
-            }
-
-            if (match) {
-              return callback(null, doctor);
-            }
-
-            checkPatient();
-          }
-        );
-      }
+      [normalizedEmail]
     );
-  }
 
+    if (doctorResult.rows.length > 0) {
+      const doctor = doctorResult.rows[0];
 
-  // =====================================================
-  // 3. CHECK PATIENT
-  // =====================================================
+      const match = await bcrypt.compare(
+        password,
+        doctor.password
+      );
 
-  function checkPatient() {
+      if (match) {
+        // Never send password hash
+        delete doctor.password;
 
-    db.get(
+        return callback(null, doctor);
+      }
+
+      // Wrong doctor password.
+      // Continue checking patient.
+    }
+
+    // =====================================================
+    // 3. CHECK PATIENT
+    // =====================================================
+
+    const patientResult = await db.query(
       `
-        SELECT
-          id,
-          fullName,
-          email,
-          phone,
-          password,
-          role
-        FROM patients
-        WHERE LOWER(email) = ?
-        LIMIT 1
+      SELECT
+        id,
+        "fullName",
+        email,
+        phone,
+        password,
+        role
+      FROM patients
+      WHERE LOWER(email) = $1
+      LIMIT 1
       `,
-      [normalizedEmail],
-      (err, patient) => {
-
-        if (err) {
-          return callback(err);
-        }
-
-        if (!patient) {
-          return callback(null, null);
-        }
-
-        bcrypt.compare(
-          password,
-          patient.password,
-          (err, match) => {
-
-            if (err) {
-              return callback(err);
-            }
-
-            if (!match) {
-              return callback(null, null);
-            }
-
-            // Never send password hash to frontend
-            delete patient.password;
-
-            callback(null, patient);
-          }
-        );
-      }
+      [normalizedEmail]
     );
+
+    if (patientResult.rows.length === 0) {
+      return callback(null, null);
+    }
+
+    const patient = patientResult.rows[0];
+
+    const match = await bcrypt.compare(
+      password,
+      patient.password
+    );
+
+    if (!match) {
+      return callback(null, null);
+    }
+
+    // Never send password hash to frontend
+    delete patient.password;
+
+    callback(null, patient);
+
+  } catch (err) {
+    console.error(
+      "❌ LOGIN DATABASE ERROR:",
+      err.message
+    );
+
+    callback(err);
   }
-} 
-
-
-
+};
 
 
 // =====================================================

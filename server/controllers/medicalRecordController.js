@@ -7,10 +7,16 @@ const {
   deleteMedicalRecord,
 } = require("../models/medicalRecordModel");
 
+
 // ========================================
 // DOCTOR: Add Medical Record
 // ========================================
-const addMedicalRecord = (req, res) => {
+
+const addMedicalRecord = (
+  req,
+  res
+) => {
+
   const {
     patientName,
     doctor,
@@ -20,7 +26,9 @@ const addMedicalRecord = (req, res) => {
     visitDate,
   } = req.body;
 
+
   // Basic validation
+
   if (
     !patientName ||
     !doctor ||
@@ -29,9 +37,11 @@ const addMedicalRecord = (req, res) => {
     !visitDate
   ) {
     return res.status(400).json({
-      message: "Please provide all required medical record fields.",
+      message:
+        "Please provide all required medical record fields.",
     });
   }
+
 
   createMedicalRecord(
     {
@@ -43,104 +53,155 @@ const addMedicalRecord = (req, res) => {
       visitDate,
     },
     (err, id) => {
+
       if (err) {
+
         console.log(
           "❌ Failed to create medical record:",
           err
         );
 
         return res.status(500).json({
-          message: "Failed to add medical record",
-          error: err.message,
+          message:
+            "Failed to add medical record",
+          error:
+            err.message,
         });
       }
+
 
       console.log(
         "✅ Medical record created. ID:",
         id
       );
 
+
       return res.status(201).json({
-        message: "Medical record added successfully!",
-        recordId: id,
+        message:
+          "Medical record added successfully!",
+        recordId:
+          id,
       });
     }
   );
 };
 
+
 // ========================================
 // ADMIN: Get All Medical Records
 // ========================================
-const getMedicalRecords = (req, res) => {
-  getAllMedicalRecords((err, rows) => {
-    if (err) {
-      console.log(
-        "❌ Failed to fetch medical records:",
-        err
-      );
 
-      return res.status(500).json({
-        message: "Failed to fetch medical records",
-      });
+const getMedicalRecords = (
+  req,
+  res
+) => {
+
+  getAllMedicalRecords(
+    (err, rows) => {
+
+      if (err) {
+
+        console.log(
+          "❌ Failed to fetch medical records:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to fetch medical records",
+        });
+      }
+
+
+      return res.json(rows);
     }
-
-    return res.json(rows);
-  });
+  );
 };
+
 
 // ========================================
 // PATIENT: Get Own Medical Records
 // ========================================
-const getPatientMedicalRecords = (req, res) => {
 
-  // IMPORTANT:
-  // The patient ID comes from the verified JWT.
-  const patientId = req.user.id;
+const getPatientMedicalRecords = (
+  req,
+  res
+) => {
+
+  // Patient ID comes from the verified JWT.
+
+  const patientId =
+    req.user.id;
+
 
   console.log(
     "🔐 Patient requesting medical records. ID:",
     patientId
   );
 
-  // Find the patient's real information
-  db.get(
+
+  // ========================================
+  // FIND PATIENT
+  // ========================================
+
+  db.query(
     `
-      SELECT id, fullName, email
-      FROM patients
-      WHERE id = ?
+    SELECT
+      id,
+      "fullName",
+      email
+    FROM patients
+    WHERE id = $1
     `,
     [patientId],
-    (patientErr, patient) => {
+    (patientErr, result) => {
 
       if (patientErr) {
+
         console.log(
           "❌ Patient lookup error:",
           patientErr
         );
 
         return res.status(500).json({
-          message: "Failed to identify patient",
+          message:
+            "Failed to identify patient",
         });
       }
 
-      if (!patient) {
+
+      if (
+        !result.rows ||
+        result.rows.length === 0
+      ) {
+
         return res.status(404).json({
-          message: "Patient not found",
+          message:
+            "Patient not found",
         });
       }
+
+
+      const patient =
+        result.rows[0];
+
 
       console.log(
         "✅ Patient identified:",
         patient.fullName
       );
 
-      // Now retrieve records using the verified
-      // patient's name from the database.
+
+      // ========================================
+      // GET PATIENT RECORDS
+      // ========================================
+
       getMedicalRecordsByPatient(
         patient.fullName,
         (err, rows) => {
 
           if (err) {
+
             console.log(
               "❌ Failed to fetch patient records:",
               err
@@ -152,6 +213,7 @@ const getPatientMedicalRecords = (req, res) => {
             });
           }
 
+
           return res.json(rows);
         }
       );
@@ -159,31 +221,51 @@ const getPatientMedicalRecords = (req, res) => {
   );
 };
 
+
 // ========================================
 // ADMIN: Delete Medical Record
 // ========================================
-const removeMedicalRecord = (req, res) => {
-  const { id } = req.params;
 
-  deleteMedicalRecord(id, (err) => {
+const removeMedicalRecord = (
+  req,
+  res
+) => {
 
-    if (err) {
-      console.log(
-        "❌ Failed to delete medical record:",
-        err
-      );
+  const {
+    id,
+  } = req.params;
 
-      return res.status(500).json({
-        message: "Failed to delete medical record",
+
+  deleteMedicalRecord(
+    id,
+    (err) => {
+
+      if (err) {
+
+        console.log(
+          "❌ Failed to delete medical record:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to delete medical record",
+        });
+      }
+
+
+      return res.json({
+        message:
+          "Medical record deleted successfully!",
       });
     }
-
-    return res.json({
-      message:
-        "Medical record deleted successfully!",
-    });
-  });
+  );
 };
+
+
+// ========================================
+// EXPORT
+// ========================================
 
 module.exports = {
   addMedicalRecord,

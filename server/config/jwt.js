@@ -8,14 +8,13 @@ const JWT_SECRET =
 // GENERATE JWT TOKEN
 // =====================================================
 
-const generateToken = (doctor) => {
-
+const generateToken = (user) => {
   return jwt.sign(
     {
-      id: doctor.id,
-      fullName: doctor.fullName,
-      email: doctor.email,
-      role: doctor.role,
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
     },
     JWT_SECRET,
     {
@@ -30,7 +29,6 @@ const generateToken = (doctor) => {
 // =====================================================
 
 const verifyToken = (token) => {
-
   return jwt.verify(
     token,
     JWT_SECRET

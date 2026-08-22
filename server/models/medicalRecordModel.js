@@ -3,104 +3,129 @@ const db = require("../database/database");
 // ========================================
 // Create Medical Record
 // ========================================
-const createMedicalRecord = (
+
+const createMedicalRecord = async (
   record,
   callback
 ) => {
+  try {
+    const result = await db.query(
+      `
+      INSERT INTO medical_records
+      (
+        "patientName",
+        doctor,
+        diagnosis,
+        prescription,
+        notes,
+        "visitDate"
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+      `,
+      [
+        record.patientName,
+        record.doctor,
+        record.diagnosis,
+        record.prescription,
+        record.notes || "",
+        record.visitDate,
+      ]
+    );
 
-  const sql = `
-    INSERT INTO medical_records
-    (
-      patientName,
-      doctor,
-      diagnosis,
-      prescription,
-      notes,
-      visitDate
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
+    callback(null, result.rows[0].id);
 
-  db.run(
-    sql,
-    [
-      record.patientName,
-      record.doctor,
-      record.diagnosis,
-      record.prescription,
-      record.notes || "",
-      record.visitDate,
-    ],
-    function (err) {
-
-      if (err) {
-        return callback(err);
-      }
-
-      callback(null, this.lastID);
-    }
-  );
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // ========================================
 // Get All Medical Records
 // ========================================
-const getAllMedicalRecords = (
+
+const getAllMedicalRecords = async (
   callback
 ) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM medical_records
+      ORDER BY "visitDate" DESC
+      `
+    );
 
-  const sql = `
-    SELECT *
-    FROM medical_records
-    ORDER BY visitDate DESC
-  `;
+    callback(null, result.rows);
 
-  db.all(
-    sql,
-    [],
-    callback
-  );
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // ========================================
 // Get Medical Records By Patient
 // ========================================
-const getMedicalRecordsByPatient = (
+
+const getMedicalRecordsByPatient = async (
   patientName,
   callback
 ) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM medical_records
+      WHERE "patientName" = $1
+      ORDER BY "visitDate" DESC
+      `,
+      [patientName]
+    );
 
-  const sql = `
-    SELECT *
-    FROM medical_records
-    WHERE patientName = ?
-    ORDER BY visitDate DESC
-  `;
+    callback(null, result.rows);
 
-  db.all(
-    sql,
-    [patientName],
-    callback
-  );
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // ========================================
 // Delete Medical Record
 // ========================================
-const deleteMedicalRecord = (
+
+const deleteMedicalRecord = async (
   id,
   callback
 ) => {
-
-  db.run(
-    `
+  try {
+    const result = await db.query(
+      `
       DELETE FROM medical_records
-      WHERE id = ?
-    `,
-    [id],
-    callback
-  );
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return callback(
+        new Error("Medical record not found.")
+      );
+    }
+
+    callback(null);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
+
+// ========================================
+// EXPORT
+// ========================================
 
 module.exports = {
   createMedicalRecord,

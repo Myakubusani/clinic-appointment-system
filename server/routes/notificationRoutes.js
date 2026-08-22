@@ -15,58 +15,82 @@ const {
   removeNotification,
 } = require("../controllers/notificationController");
 
-// =============================
-// Get all notifications
-// =============================
-router.get(
-  "/",
-  verifyToken,
-  getMyNotifications
-);
 
-// =============================
-// Get unread notifications
-// =============================
+// =====================================================
+// GET UNREAD NOTIFICATIONS
+// AUTHENTICATED USER
+// =====================================================
+
 router.get(
   "/unread",
   verifyToken,
   getUnreadMyNotifications
 );
 
-// =============================
-// Create notification
-// =============================
-router.post(
-  "/",
-  verifyToken,
-  addNotification
-);
 
-// =============================
-// Mark one notification as read
-// =============================
-router.put(
-  "/:id/read",
-  verifyToken,
-  readNotification
-);
+// =====================================================
+// MARK ALL NOTIFICATIONS AS READ
+// AUTHENTICATED USER
+// =====================================================
 
-// =============================
-// Mark all notifications as read
-// =============================
 router.put(
   "/read-all",
   verifyToken,
   readAllNotifications
 );
 
-// =============================
-// Delete notification
-// =============================
+
+// =====================================================
+// GET ALL MY NOTIFICATIONS
+// AUTHENTICATED USER
+// =====================================================
+
+router.get(
+  "/",
+  verifyToken,
+  getMyNotifications
+);
+
+
+// =====================================================
+// CREATE NOTIFICATION
+// ADMIN ONLY
+// =====================================================
+
+router.post(
+  "/",
+  verifyToken,
+  allowRoles("admin"),
+  addNotification
+);
+
+
+// =====================================================
+// MARK ONE NOTIFICATION AS READ
+// AUTHENTICATED USER
+// =====================================================
+
+router.put(
+  "/:id/read",
+  verifyToken,
+  readNotification
+);
+
+
+// =====================================================
+// DELETE NOTIFICATION
+// AUTHENTICATED USER
+// =====================================================
+
 router.delete(
   "/:id",
   verifyToken,
   removeNotification
 );
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = router;

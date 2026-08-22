@@ -1,6 +1,8 @@
 const db = require("../database/database");
 
-const { sendAppointmentEmail } = require("../services/emailService");
+const {
+  sendAppointmentEmail,
+} = require("../services/emailService");
 
 const {
   createAppointment,
@@ -14,13 +16,18 @@ const {
   createNotification,
 } = require("../models/notificationModel");
 
+
 // =====================================================
 // BOOK APPOINTMENT
 // =====================================================
+
 const bookAppointment = (req, res) => {
   createAppointment(req.body, (err, id) => {
     if (err) {
-      console.log("❌ Failed to create appointment:", err);
+      console.log(
+        "❌ Failed to create appointment:",
+        err
+      );
 
       return res.status(500).json({
         message: "Failed to book appointment",
@@ -28,11 +35,15 @@ const bookAppointment = (req, res) => {
       });
     }
 
-    console.log("✅ Appointment booked. ID:", id);
+    console.log(
+      "✅ Appointment booked. ID:",
+      id
+    );
 
     // =================================================
     // SEND APPOINTMENT EMAIL
     // =================================================
+
     sendAppointmentEmail(
       req.body.email,
       req.body.patientName,
@@ -45,10 +56,16 @@ const bookAppointment = (req, res) => {
     // =================================================
     // NOTIFY DOCTOR
     // =================================================
-    db.get(
-      "SELECT id FROM doctors WHERE fullName = ?",
+
+    db.query(
+      `
+      SELECT id
+      FROM doctors
+      WHERE "fullName" = $1
+      `,
       [req.body.doctor],
-      (doctorErr, doctor) => {
+      (doctorErr, doctorResult) => {
+
         if (doctorErr) {
           console.log(
             "❌ Doctor notification lookup error:",
@@ -58,7 +75,10 @@ const bookAppointment = (req, res) => {
           return;
         }
 
-        if (!doctor) {
+        if (
+          !doctorResult.rows ||
+          doctorResult.rows.length === 0
+        ) {
           console.log(
             "⚠️ Doctor not found for notification:",
             req.body.doctor
@@ -67,22 +87,31 @@ const bookAppointment = (req, res) => {
           return;
         }
 
-        console.log("✅ Doctor found:", doctor);
+        const doctor = doctorResult.rows[0];
+
+        console.log(
+          "✅ Doctor found:",
+          doctor
+        );
 
         createNotification(
           {
             userId: doctor.id,
             userRole: "doctor",
             title: "📅 New Appointment",
-            message: `${req.body.patientName} booked an appointment with you on ${req.body.appointmentDate} at ${req.body.appointmentTime}.`,
+            message:
+              `${req.body.patientName} booked an appointment with you on ` +
+              `${req.body.appointmentDate} at ${req.body.appointmentTime}.`,
             type: "appointment",
           },
           (notificationErr, notificationId) => {
+
             if (notificationErr) {
               console.log(
                 "❌ Failed to create doctor notification:",
                 notificationErr
               );
+
             } else {
               console.log(
                 "✅ Doctor notification created. ID:",
@@ -94,26 +123,38 @@ const bookAppointment = (req, res) => {
       }
     );
 
+
     // =================================================
     // NOTIFY PATIENT
     // =================================================
-    if (req.user && req.user.role === "patient") {
-      console.log("🔔 Creating booking notification for patient");
+
+    if (
+      req.user &&
+      req.user.role === "patient"
+    ) {
+
+      console.log(
+        "🔔 Creating booking notification for patient"
+      );
 
       createNotification(
         {
           userId: req.user.id,
           userRole: "patient",
           title: "📅 Appointment Booked",
-          message: `Your appointment with ${req.body.doctor} has been booked for ${req.body.appointmentDate} at ${req.body.appointmentTime}.`,
+          message:
+            `Your appointment with ${req.body.doctor} has been booked for ` +
+            `${req.body.appointmentDate} at ${req.body.appointmentTime}.`,
           type: "appointment",
         },
         (notificationErr, notificationId) => {
+
           if (notificationErr) {
             console.log(
               "❌ Failed to create patient booking notification:",
               notificationErr
             );
+
           } else {
             console.log(
               "✅ Patient booking notification created. ID:",
@@ -124,63 +165,109 @@ const bookAppointment = (req, res) => {
       );
     }
 
+
     return res.status(201).json({
-      message: "Appointment booked successfully!",
+      message:
+        "Appointment booked successfully!",
       appointmentId: id,
     });
   });
 };
 
+
 // =====================================================
 // GET ONE APPOINTMENT
 // =====================================================
-const getAppointment = (req, res) => {
+
+const getAppointment = (
+  req,
+  res
+) => {
+
   const { id } = req.params;
 
-  console.log("=================================");
-  console.log("📋 GET APPOINTMENT");
-  console.log("Appointment ID:", id);
-  console.log("=================================");
+  console.log(
+    "================================="
+  );
 
-  getAppointmentById(id, (err, appointment) => {
-    if (err) {
-      console.log("❌ Get appointment error:", err);
+  console.log(
+    "📋 GET APPOINTMENT"
+  );
 
-      return res.status(500).json({
-        message: "Failed to fetch appointment",
-        error: err.message,
-      });
+  console.log(
+    "Appointment ID:",
+    id
+  );
+
+  console.log(
+    "================================="
+  );
+
+  getAppointmentById(
+    id,
+    (err, appointment) => {
+
+      if (err) {
+
+        console.log(
+          "❌ Get appointment error:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to fetch appointment",
+          error: err.message,
+        });
+      }
+
+      console.log(
+        "Appointment:",
+        appointment
+      );
+
+      if (!appointment) {
+
+        return res.status(404).json({
+          message:
+            "Appointment not found",
+        });
+      }
+
+      return res.json(
+        appointment
+      );
     }
-
-    console.log("Appointment:", appointment);
-
-    if (!appointment) {
-      return res.status(404).json({
-        message: "Appointment not found",
-      });
-    }
-
-    return res.json(appointment);
-  });
+  );
 };
+
 
 // =====================================================
 // GET PATIENT APPOINTMENTS
 // =====================================================
-const getMyAppointments = (req, res) => {
-  const { patientName } = req.params;
+
+const getMyAppointments = (
+  req,
+  res
+) => {
+
+  const { patientName } =
+    req.params;
 
   getAppointmentsByPatient(
     patientName,
     (err, rows) => {
+
       if (err) {
+
         console.log(
           "❌ Failed to fetch patient appointments:",
           err
         );
 
         return res.status(500).json({
-          message: "Failed to fetch appointments",
+          message:
+            "Failed to fetch appointments",
         });
       }
 
@@ -189,88 +276,146 @@ const getMyAppointments = (req, res) => {
   );
 };
 
+
 // =====================================================
 // GET ALL APPOINTMENTS
 // =====================================================
-const getAllAppointments = (req, res) => {
-  getAllAppointmentsModel((err, rows) => {
-    if (err) {
-      console.log(
-        "❌ Failed to fetch all appointments:",
-        err
-      );
 
-      return res.status(500).json({
-        message: "Failed to fetch appointments",
-      });
+const getAllAppointments = (
+  req,
+  res
+) => {
+
+  getAllAppointmentsModel(
+    (err, rows) => {
+
+      if (err) {
+
+        console.log(
+          "❌ Failed to fetch all appointments:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to fetch appointments",
+        });
+      }
+
+      return res.json(rows);
     }
-
-    return res.json(rows);
-  });
+  );
 };
+
 
 // =====================================================
 // UPDATE APPOINTMENT STATUS
 // =====================================================
-const updateAppointment = (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+
+const updateAppointment = (
+  req,
+  res
+) => {
+
+  const {
+    id,
+  } = req.params;
+
+  const {
+    status,
+  } = req.body;
 
   console.log("");
-  console.log("========================================");
-  console.log("🔔 UPDATE APPOINTMENT RUNNING");
-  console.log("Appointment ID:", id);
-  console.log("New Status:", status);
-  console.log("========================================");
+
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "🔔 UPDATE APPOINTMENT RUNNING"
+  );
+
+  console.log(
+    "Appointment ID:",
+    id
+  );
+
+  console.log(
+    "New Status:",
+    status
+  );
+
+  console.log(
+    "========================================"
+  );
+
 
   // =================================================
   // GET APPOINTMENT FIRST
   // =================================================
+
   getAppointmentById(
     id,
     (findErr, appointment) => {
+
       if (findErr) {
+
         console.log(
           "❌ Failed to find appointment:",
           findErr
         );
 
         return res.status(500).json({
-          message: "Failed to find appointment",
-          error: findErr.message,
+          message:
+            "Failed to find appointment",
+          error:
+            findErr.message,
         });
       }
 
       if (!appointment) {
+
         console.log(
           "❌ Appointment not found:",
           id
         );
 
         return res.status(404).json({
-          message: "Appointment not found",
+          message:
+            "Appointment not found",
         });
       }
 
-      console.log("✅ Appointment found:");
-      console.log(appointment);
+      console.log(
+        "✅ Appointment found:"
+      );
+
+      console.log(
+        appointment
+      );
+
 
       // =================================================
       // UPDATE APPOINTMENT STATUS
       // =================================================
+
       updateAppointmentStatus(
         id,
         status,
         (updateErr) => {
+
           if (updateErr) {
+
             console.log(
               "❌ Failed to update appointment:",
               updateErr
             );
 
             return res.status(500).json({
-              message: "Failed to update appointment",
-              error: updateErr.message,
+              message:
+                "Failed to update appointment",
+              error:
+                updateErr.message,
             });
           }
 
@@ -278,14 +423,25 @@ const updateAppointment = (req, res) => {
             "✅ Appointment status updated successfully"
           );
 
+
           // =================================================
           // FIND PATIENT
           // =================================================
-          db.get(
-            "SELECT id, fullName, email FROM patients WHERE fullName = ?",
+
+          db.query(
+            `
+            SELECT
+              id,
+              "fullName",
+              email
+            FROM patients
+            WHERE "fullName" = $1
+            `,
             [appointment.patientName],
-            (patientErr, patient) => {
+            (patientErr, patientResult) => {
+
               if (patientErr) {
+
                 console.log(
                   "❌ Patient notification lookup error:",
                   patientErr
@@ -297,7 +453,12 @@ const updateAppointment = (req, res) => {
                 });
               }
 
-              if (!patient) {
+
+              if (
+                !patientResult.rows ||
+                patientResult.rows.length === 0
+              ) {
+
                 console.log(
                   "❌ PATIENT NOT FOUND FOR NOTIFICATION"
                 );
@@ -313,59 +474,118 @@ const updateAppointment = (req, res) => {
                 });
               }
 
-              console.log("✅ PATIENT FOUND:");
-              console.log(patient);
+
+              const patient =
+                patientResult.rows[0];
+
+
+              console.log(
+                "✅ PATIENT FOUND:"
+              );
+
+              console.log(
+                patient
+              );
+
 
               // =================================================
               // CREATE NOTIFICATION CONTENT
               // =================================================
-              let title = "📅 Appointment Updated";
 
-              let message = `Your appointment with ${appointment.doctor} on ${appointment.appointmentDate} at ${appointment.appointmentTime} is now ${status}.`;
+              let title =
+                "📅 Appointment Updated";
 
-              if (status === "Approved") {
-                title = "✅ Appointment Approved";
+              let message =
+                `Your appointment with ${appointment.doctor} on ` +
+                `${appointment.appointmentDate} at ` +
+                `${appointment.appointmentTime} is now ${status}.`;
 
-                message = `Your appointment with ${appointment.doctor} has been approved for ${appointment.appointmentDate} at ${appointment.appointmentTime}.`;
+
+              if (
+                status === "Approved"
+              ) {
+
+                title =
+                  "✅ Appointment Approved";
+
+                message =
+                  `Your appointment with ${appointment.doctor} has been approved for ` +
+                  `${appointment.appointmentDate} at ` +
+                  `${appointment.appointmentTime}.`;
               }
 
-              if (status === "Rejected") {
-                title = "❌ Appointment Rejected";
 
-                message = `Your appointment with ${appointment.doctor} on ${appointment.appointmentDate} at ${appointment.appointmentTime} has been rejected.`;
+              if (
+                status === "Rejected"
+              ) {
+
+                title =
+                  "❌ Appointment Rejected";
+
+                message =
+                  `Your appointment with ${appointment.doctor} on ` +
+                  `${appointment.appointmentDate} at ` +
+                  `${appointment.appointmentTime} has been rejected.`;
               }
+
 
               console.log("");
+
               console.log(
                 "🔔 CREATING PATIENT NOTIFICATION"
               );
 
               console.log({
-                userId: patient.id,
-                userRole: "patient",
+                userId:
+                  patient.id,
+
+                userRole:
+                  "patient",
+
                 title,
+
                 message,
-                type: "appointment",
+
+                type:
+                  "appointment",
               });
+
 
               // =================================================
               // CREATE NOTIFICATION
               // =================================================
+
               createNotification(
                 {
-                  userId: patient.id,
-                  userRole: "patient",
+                  userId:
+                    patient.id,
+
+                  userRole:
+                    "patient",
+
                   title,
+
                   message,
-                  type: "appointment",
+
+                  type:
+                    "appointment",
                 },
-                (notificationErr, notificationId) => {
-                  if (notificationErr) {
+                (
+                  notificationErr,
+                  notificationId
+                ) => {
+
+                  if (
+                    notificationErr
+                  ) {
+
                     console.log(
                       "❌ NOTIFICATION DATABASE ERROR:"
                     );
 
-                    console.log(notificationErr);
+                    console.log(
+                      notificationErr
+                    );
 
                     return;
                   }
@@ -381,10 +601,15 @@ const updateAppointment = (req, res) => {
                 }
               );
 
+
               // =================================================
               // SEND EMAIL ABOUT STATUS
               // =================================================
-              if (patient.email) {
+
+              if (
+                patient.email
+              ) {
+
                 sendAppointmentEmail(
                   patient.email,
                   appointment.patientName,
@@ -395,13 +620,17 @@ const updateAppointment = (req, res) => {
                 );
               }
 
+
               console.log("");
+
               console.log(
                 "✅ Appointment approval/rejection process completed"
               );
+
               console.log(
                 "========================================"
               );
+
 
               return res.json({
                 message:
@@ -415,9 +644,11 @@ const updateAppointment = (req, res) => {
   );
 };
 
+
 // =====================================================
 // EXPORT CONTROLLERS
 // =====================================================
+
 module.exports = {
   bookAppointment,
   getAppointment,

@@ -3,146 +3,203 @@ const db = require("../database/database");
 // =============================
 // Create Notification
 // =============================
-const createNotification = (
+
+const createNotification = async (
   notification,
   callback
 ) => {
-  const sql = `
-    INSERT INTO notifications
-    (userId, userRole, title, message, type)
-    VALUES (?, ?, ?, ?, ?)
-  `;
+  try {
+    const result = await db.query(
+      `
+      INSERT INTO notifications
+      (
+        "userId",
+        "userRole",
+        title,
+        message,
+        type
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+      `,
+      [
+        notification.userId,
+        notification.userRole,
+        notification.title,
+        notification.message,
+        notification.type || "general",
+      ]
+    );
 
-  db.run(
-    sql,
-    [
-      notification.userId,
-      notification.userRole,
-      notification.title,
-      notification.message,
-      notification.type || "general",
-    ],
-    function (err) {
-      callback(err, this.lastID);
-    }
-  );
+    callback(null, result.rows[0].id);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // =============================
 // Get Notifications for User
 // =============================
-const getNotificationsByUser = (
+
+const getNotificationsByUser = async (
   userId,
   userRole,
   callback
 ) => {
-  const sql = `
-    SELECT *
-    FROM notifications
-    WHERE userId = ?
-    AND userRole = ?
-    ORDER BY createdAt DESC
-  `;
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM notifications
+      WHERE "userId" = $1
+      AND "userRole" = $2
+      ORDER BY "createdAt" DESC
+      `,
+      [userId, userRole]
+    );
 
-  db.all(
-    sql,
-    [userId, userRole],
-    callback
-  );
+    callback(null, result.rows);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // =============================
 // Get Unread Notifications
 // =============================
-const getUnreadNotifications = (
+
+const getUnreadNotifications = async (
   userId,
   userRole,
   callback
 ) => {
-  const sql = `
-    SELECT *
-    FROM notifications
-    WHERE userId = ?
-    AND userRole = ?
-    AND isRead = 0
-    ORDER BY createdAt DESC
-  `;
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM notifications
+      WHERE "userId" = $1
+      AND "userRole" = $2
+      AND "isRead" = 0
+      ORDER BY "createdAt" DESC
+      `,
+      [userId, userRole]
+    );
 
-  db.all(
-    sql,
-    [userId, userRole],
-    callback
-  );
+    callback(null, result.rows);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // =============================
 // Mark Notification as Read
 // =============================
-const markNotificationAsRead = (
+
+const markNotificationAsRead = async (
   id,
   userId,
   userRole,
   callback
 ) => {
-  const sql = `
-    UPDATE notifications
-    SET isRead = 1
-    WHERE id = ?
-    AND userId = ?
-    AND userRole = ?
-  `;
+  try {
+    const result = await db.query(
+      `
+      UPDATE notifications
+      SET "isRead" = 1
+      WHERE id = $1
+      AND "userId" = $2
+      AND "userRole" = $3
+      `,
+      [id, userId, userRole]
+    );
 
-  db.run(
-    sql,
-    [id, userId, userRole],
-    callback
-  );
+    if (result.rowCount === 0) {
+      return callback(
+        new Error("Notification not found.")
+      );
+    }
+
+    callback(null);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // =============================
 // Mark All Notifications as Read
 // =============================
-const markAllNotificationsAsRead = (
+
+const markAllNotificationsAsRead = async (
   userId,
   userRole,
   callback
 ) => {
-  const sql = `
-    UPDATE notifications
-    SET isRead = 1
-    WHERE userId = ?
-    AND userRole = ?
-  `;
+  try {
+    await db.query(
+      `
+      UPDATE notifications
+      SET "isRead" = 1
+      WHERE "userId" = $1
+      AND "userRole" = $2
+      `,
+      [userId, userRole]
+    );
 
-  db.run(
-    sql,
-    [userId, userRole],
-    callback
-  );
+    callback(null);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
 
 // =============================
 // Delete Notification
 // =============================
-const deleteNotification = (
+
+const deleteNotification = async (
   id,
   userId,
   userRole,
   callback
 ) => {
-  const sql = `
-    DELETE FROM notifications
-    WHERE id = ?
-    AND userId = ?
-    AND userRole = ?
-  `;
+  try {
+    const result = await db.query(
+      `
+      DELETE FROM notifications
+      WHERE id = $1
+      AND "userId" = $2
+      AND "userRole" = $3
+      `,
+      [id, userId, userRole]
+    );
 
-  db.run(
-    sql,
-    [id, userId, userRole],
-    callback
-  );
+    if (result.rowCount === 0) {
+      return callback(
+        new Error("Notification not found.")
+      );
+    }
+
+    callback(null);
+
+  } catch (err) {
+    callback(err);
+  }
 };
+
+
+// =============================
+// EXPORT
+// =============================
 
 module.exports = {
   createNotification,

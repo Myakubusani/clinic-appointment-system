@@ -1,81 +1,164 @@
 const db = require("../database/database");
 
-// =============================
-// Create appointment
-// =============================
-const createAppointment = (appointment, callback) => {
-  const sql = `
-    INSERT INTO appointments
-    (patientName, doctor, appointmentDate, appointmentTime, reason)
-    VALUES (?, ?, ?, ?, ?)
-  `;
+// =====================================================
+// CREATE APPOINTMENT
+// =====================================================
 
-  db.run(
-    sql,
-    [
-      appointment.patientName,
-      appointment.doctor,
-      appointment.appointmentDate,
-      appointment.appointmentTime,
-      appointment.reason,
-    ],
-    function (err) {
-      callback(err, this.lastID);
+const createAppointment = async (
+  appointment,
+  callback
+) => {
+  try {
+    const result = await db.query(
+      `
+      INSERT INTO appointments
+      (
+        "patientName",
+        doctor,
+        "appointmentDate",
+        "appointmentTime",
+        reason
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+      `,
+      [
+        appointment.patientName,
+        appointment.doctor,
+        appointment.appointmentDate,
+        appointment.appointmentTime,
+        appointment.reason || null,
+      ]
+    );
+
+    callback(null, result.rows[0].id);
+
+  } catch (err) {
+    callback(err);
+  }
+};
+
+
+// =====================================================
+// GET ONE APPOINTMENT BY ID
+// =====================================================
+
+const getAppointmentById = async (
+  id,
+  callback
+) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM appointments
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    const appointment =
+      result.rows.length > 0
+        ? result.rows[0]
+        : null;
+
+    callback(null, appointment);
+
+  } catch (err) {
+    callback(err);
+  }
+};
+
+
+// =====================================================
+// GET APPOINTMENTS FOR ONE PATIENT
+// =====================================================
+
+const getAppointmentsByPatient = async (
+  patientName,
+  callback
+) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM appointments
+      WHERE "patientName" = $1
+      ORDER BY "appointmentDate" ASC,
+               "appointmentTime" ASC
+      `,
+      [patientName]
+    );
+
+    callback(null, result.rows);
+
+  } catch (err) {
+    callback(err);
+  }
+};
+
+
+// =====================================================
+// GET ALL APPOINTMENTS
+// =====================================================
+
+const getAllAppointmentsModel = async (
+  callback
+) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT *
+      FROM appointments
+      ORDER BY "appointmentDate" ASC,
+               "appointmentTime" ASC
+      `
+    );
+
+    callback(null, result.rows);
+
+  } catch (err) {
+    callback(err);
+  }
+};
+
+
+// =====================================================
+// UPDATE APPOINTMENT STATUS
+// =====================================================
+
+const updateAppointmentStatus = async (
+  id,
+  status,
+  callback
+) => {
+  try {
+    const result = await db.query(
+      `
+      UPDATE appointments
+      SET status = $1
+      WHERE id = $2
+      `,
+      [status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return callback(
+        new Error("Appointment not found.")
+      );
     }
-  );
+
+    callback(null);
+
+  } catch (err) {
+    callback(err);
+  }
 };
 
-// =============================
-// Get one appointment by ID
-// =============================
-const getAppointmentById = (id, callback) => {
-  db.get(
-    "SELECT * FROM appointments WHERE id = ?",
-    [id],
-    callback
-  );
-};
 
-// =============================
-// Get appointments for one patient
-// =============================
-const getAppointmentsByPatient = (patientName, callback) => {
-  const sql = `
-    SELECT *
-    FROM appointments
-    WHERE patientName = ?
-    ORDER BY appointmentDate ASC
-  `;
-
-  db.all(sql, [patientName], callback);
-};
-
-// =============================
-// Get all appointments
-// =============================
-const getAllAppointmentsModel = (callback) => {
-  const sql = `
-    SELECT *
-    FROM appointments
-    ORDER BY appointmentDate ASC,
-             appointmentTime ASC
-  `;
-
-  db.all(sql, [], callback);
-};
-
-// =============================
-// Update appointment status
-// =============================
-const updateAppointmentStatus = (id, status, callback) => {
-  const sql = `
-    UPDATE appointments
-    SET status = ?
-    WHERE id = ?
-  `;
-
-  db.run(sql, [status, id], callback);
-};
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
   createAppointment,
